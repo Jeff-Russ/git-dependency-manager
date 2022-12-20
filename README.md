@@ -35,7 +35,7 @@ If you find yourself doing this a lot, for different repositories, create a reus
 that aliases the `curl` command (for zsh terminals):  
 
 ```zsh
-% echo "\\n"'alias add-gdm="curl https://raw.githubusercontent.com/Jeff-Russ/git-dependency-manager/main/gdm.zsh > ./gdm.zsh % chmod 755 ./gdm.zsh"' >> ~/.zshrc 
+% echo "\\n"'alias dl-gdm="curl https://raw.githubusercontent.com/Jeff-Russ/git-dependency-manager/main/gdm.zsh > ./gdm.zsh % chmod 755 ./gdm.zsh"' >> ~/.zshrc 
 ```
 
 Then, from your project root, run `add-gdm` and the `gdm.zsh`  will be there for ya.

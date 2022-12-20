@@ -37,17 +37,6 @@
 GDM_CMD_DIR=$(dirname -- "${(%):-%N}")
 # NOTE ${(%):-%N} is zsh's equivalent to ${BASH_SOURCE[0]} (is is the current script's path)
 
-if ! (( ${+GDM_EPS_DIR} )) ; then
-  export GDM_DEPS_DIR="$HOME/GDM_DEPS"
-  if [ -d "$GDM_DEPS_DIR" ] ; then
-    if ! mkdir "$GDM_DEPS_DIR" ; then 
-      printf "ERROR in ${GDM_CMD_DIR}: mkdir ${GDM_DEPS_DIR} failed.\n"  >&2 
-      unset GDM_DEPS_DIR
-      return 1
-    fi
-  fi
-fi
-
 gdm-conf-template() {
   cat << 'CONFDOC'
 gdm-conf() {
@@ -138,8 +127,48 @@ gdm-linker() {
 gdm () {
   local CALLER_DIR=$(pwd)
 
-  # FIRSTLY, EXECUTION COULD RUN HERE (to generate template of gdm-conf.zsh, although they could just make it themselves)
-  if [[ "$1" == '--init' ]] ; then
+  declare -A ARGS # all valid argument go here (except --help).
+  ARGS[initialize]='^[-]{0,2}init.*$'
+  ARGS[configure]='^[-]{0,2}conf.*$'
+  # ARGS[remove]='^[-]{0,2}(remove|rm)(=.*)?$'
+  # ARGS[list]='^[-]{0,2}(list|ls)(=.*)?$'
+
+  # An anonymous function (self executing) to check for invalid arguments:
+  local not_valid_arg='() {
+    for f in $ARGS ; do
+      [[ "$1" =~ $f ]] && return 1;
+    done;
+    return 0;
+  }'
+
+  if eval ${not_valid_arg} "$1" ; then
+    printf "Usage: call with\n  --init    to generate empty configuration file or with\n  --conf    to read existing configuration\n"
+    printf "By default, dependencies installed will be placed in ~/GDM_DEPS/ but\n"
+    printf "you can choose your own location by adding to your ~/.zshrc the following:\n  export GDM_DEPS_DIR=\"/desired/path/to/directory/\"\n"
+    return 0
+  fi
+
+  local gdm_verify='() {
+    if ! (( ${+GDM_DEPS_DIR} )) ; then
+      export GDM_DEPS_DIR="$HOME/GDM_DEPS"
+    fi
+    if ! [ -d "$GDM_DEPS_DIR" ] ; then
+      if ! mkdir "$GDM_DEPS_DIR" ; then 
+        ! (($@[(Ie)--quiet-fail])) && printf "ERROR in ${GDM_CMD_DIR}: mkdir ${GDM_DEPS_DIR} failed.\n"  >&2 
+        unset GDM_DEPS_DIR
+        return 1
+      fi
+    else
+      ! (($@[(Ie)--quiet-pass])) && printf "GDM_DEPS_DIR=${GDM_DEPS_DIR}\n"
+      return 0
+    fi
+  }'
+
+  if ! eval ${gdm_verify} "--quiet-pass" && return 1;
+
+  #-------------------------------------------------------------------------------------------
+  # Generate template of gdm-conf.zsh (although they could just make it themselves)
+  if [[ "$1" =~ ${ARGS[initialize]} ]] ; then 
     local gdm_conf_file="${CALLER_DIR}/gdm-conf.zsh"
     [[ -f "$gdm_conf_file" ]] && grep -q '[^[:space:]]' "$gdm_conf_file" && 
       printf "./gdm-conf.zsh already exists and is not empty!\nTo run file's configuration:\n  gdm --conf\n" >&2 && 
@@ -148,8 +177,11 @@ gdm () {
     printf "${CALLER_DIR}/gdm-conf.zsh configuration file generated.\n"
     return 0
 
-  # NORMALLY, EXECUTION RUNS HERE (to read currently existing configuration file)
-  elif [[ "$1" == '--conf'* ]] ;then
+  #-------------------------------------------------------------------------------------------
+  # Read currently existing configuration file and set up all dependencies 
+  # (usually for a given project unless they bypass the gdm-linker)
+  elif [[ "$1" =~ ${ARGS[configure]} ]] ;then 
+    
     ! [[ -f "./gdm-conf.zsh" ]] && printf "Error: No gdm-conf.zsh was found!" >&2 && return 1;
     source ./gdm-conf.zsh
 
@@ -163,7 +195,7 @@ gdm () {
       [[ ${#dep_params[@]} -eq 0 ]] && continue; # empty or commented line in list of deps
       printf "------------------------------------------------------------\n${dep_params}\n"
 
-      #---- clone repo or cd to it -------------------------
+      #.... clone repo or cd to it ..................................
 
       local remote_url=$dep_params[1]
       [[ "$remote_url" != *".git" ]] && remote_url="${remote_url}.git"
@@ -175,9 +207,8 @@ gdm () {
 
       if ! [ -d "${GDM_DEPS_DIR}/repo_dirname" ] ; then 
         # validate that $remote_url can be cloned:
-        if ! git ls-remote --tags --exit-code "$remote_url" >/dev/null 2>&1 ; then
+        if ! git ls-remote --exit-code "$remote_url" >/dev/null 2>&1 ; then
           local fwslashes=$(echo "$remote_url" | grep -o "/"  | wc -l | xargs)
-          local remote_url=""
           if [[ $fwslashes == 1 ]] ; then   # github is assumed...
             remote_url="https://github.com/$remote_url"
           elif [[ $fwslashes == 2 ]] ; then # incomplete url but with domain...
@@ -187,7 +218,7 @@ gdm () {
             printf "ERROR: Cannot clone \"$remote_url\"\n" >&2
             continue
           fi
-          if ! git ls-remote --tags --exit-code "$remote_url" >/dev/null 2>&1 ; then
+          if ! git ls-remote --exit-code "$remote_url" >/dev/null 2>&1 ; then
             errors+=("  Skipped: ${dep_params}\n   Reason: Cannot clone \"$remote_url\"\n")
             printf "ERROR: Cannot clone \"$remote_url\"\n" >&2
             continue
@@ -198,7 +229,7 @@ gdm () {
       cd "$repo_dirname"
       
 
-      #---- switch to branch, if specifed -------------------------
+      #.... switch to branch, if specifed ...........................
 
       local branch=$dep_params[2]
       local current_branch=$(git rev-parse --abbrev-ref HEAD) # if head is detached, current_branch will be "HEAD"
@@ -233,7 +264,7 @@ gdm () {
         printf "WARNING: \`git pull ${origin_name} ${branch}\` failed but local branch was found and will be used.\n"
       fi
 
-      #---- switch commit, if specifed -------------------------
+      #.... switch commit, if specifed ..............................
 
       local commit=$dep_params[3]
 
@@ -257,7 +288,7 @@ gdm () {
         fi
       fi
 
-      #---- execute hooks, if specifed -------------------------
+      #.... execute hooks, if specifed ..............................
       
       if [ ${#dep_params[@]} -lt 5 ] ; then 
         printf "Executing gdm-linker...\n"
@@ -287,7 +318,7 @@ gdm () {
     done
     cd "$CALLER_DIR"
     
-    printf "------------------------------------------------------------"
+    printf "------------------------------------------------------------\n"
 
     if [ ${#errors[@]} -ne 0 ] ; then
       printf "Completed, with the following errors:\n"
@@ -295,11 +326,11 @@ gdm () {
     else
       printf "Completed without errors\!\n"
     fi
-  else 
-    printf "Usage: call with\n  --init    to generate empty configuration file or with\n  --conf    to read existing configuration\n"
-    printf "By default, dependencies installed will be placed in ~/GDM_DEPS/ but\n"
-    printf "you can choose your own location by adding to your ~/.zshrc the following:\n  export GDM_DEPS_DIR=\"/desired/path/to/directory/\"\n"
-    return 0
+
+  # elif [[ "$1" =~ ${ARGS[remove]} ]] ; then ...; fi
+
+  # elif [[ "$1" =~ ${ARGS[list]} ]] ; then ...; fi
+
   fi
 }
 if [[ $ZSH_EVAL_CONTEXT == 'toplevel' ]]; then
