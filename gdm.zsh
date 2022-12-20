@@ -132,7 +132,7 @@ gdm-linker() {
     fi
   fi
   local repo_dirname=${repo_dep_path:t:r}
-  ln -s "$repo_dep_path" "${requester_modules_path}/${repo_dirname}"
+  ln "$repo_dep_path" "${requester_modules_path}/${repo_dirname}"
 }
 
 gdm () {
