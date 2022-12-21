@@ -25,7 +25,6 @@ where links to the globally installed repositories are generated.
   * Automatic cleaning of unused dependencies kept in global store via reference counting of hard links.
 * Multiple versions of the same dependency can be switched between or used concurrently.
 * Nothing is installed on your system and no changes are made to your shell environment. Simply include the `gdm.zsh` in your project root and all collaborators can assemble the same dependency configuration by one call to this script.
-* 
 
 
 # Installation
