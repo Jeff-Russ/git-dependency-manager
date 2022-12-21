@@ -19,6 +19,14 @@ It won't touch any part of your system beside a single global directory you choo
 to keep all dependencies and, optionally, a directory within each of your projects 
 where links to the globally installed repositories are generated.  
 
+# Features
+
+* Disk space efficient:  inspired by [pnpm](https://www.npmjs.com/package/pnpm/v/3.7.0-3), project dependencies are hard links to a global store.
+  * Automatic cleaning of unused dependencies kept in global store via reference counting of hard links.
+* Multiple versions of the same dependency can be switched between or used concurrently.
+* Nothing is installed on your system and no changes are made to your shell environment. Simply include the `gdm.zsh` in your project root and all collaborators can assemble the same dependency configuration by one call to this script.
+* 
+
 
 # Installation
 
@@ -69,7 +77,7 @@ After you set up your  `gdm_conf.zsh`, run the following:
 ./gdm.zsh --conf
 ```
 
-If all goes well, everything will be set up for you! By default, you'll have a `GDM_MODULES/` 
+Afterward, everything will be set up for you! By default, you'll have a `GDM_MODULES/` 
 directory in your project root with your dependencies (you probably should `.gitignore` this)
 but you can choose a different name or bypass this entirely (see `gdm_conf.zsh` comments and
 output from `./gdm.zsh --help` for more information.).   
