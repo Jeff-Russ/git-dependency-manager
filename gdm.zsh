@@ -70,7 +70,7 @@ gdm-conf() {
 #   (after pull) will be used.
 #   
 # The forth parameter (optional - pass "#" to skip) can be provided 
-#   a (new) directory name within the $GDM_DEPS_DIR to clone to repository 
+#   a (new) directory name within the $GDM_STORE_DIR to clone to repository 
 #   to instead of the default (which is the name of the repository: 
 #   the portion after the last / and before .git in the first parameter).
 #   Renaming can be helpful if you are working off of two versions (commit 
@@ -85,7 +85,7 @@ gdm-conf() {
 #   useful for any setup you needed per-dependency, such as building  
 #   dependency's source. You can define these commands a function in this 
 #   file or anywhere, so long as it is available in the shell session. 
-#   Each is executed in the directory (within $GDM_DEPS_DIR) where the 
+#   Each is executed in the directory (within $GDM_STORE_DIR) where the 
 #   repository lives. This directory path is also passed as $1 to the 
 #   command and the path to this config file's parent directory is passed 
 #   as $2.
@@ -113,15 +113,27 @@ CONFDOC
 gdm-linker() {
   local repo_dep_path="$1"
   local requester_path="$2"
-  local requester_modules_path="${requester_path}/GDM_MODULES"
-  if [ -d "$requester_modules_path" ] ; then
-    if ! mkdir "$GDM_DEPS_DIR" ; then 
-      printf "ERROR gdm-linker could not create ${requester_modules_path}\!\n" >&2 
+  local repo_dirname=${repo_dep_path:t:r}
+  local requester_modules_path="${requester_path}/$GDM_MODULES_DIRNAME"
+  if ! [ -d "$requester_modules_path" ] ; then
+    if ! mkdir "$requester_modules_path" ; then 
+      printf "ERROR gdm-linker could not create ${requester_modules_path}! \n" >&2 
       return 1
     fi
+  elif [ -d "${requester_modules_path}/${repo_dirname}" ] ; then
+    rm -rf "${requester_modules_path}/${repo_dirname}"
   fi
-  local repo_dirname=${repo_dep_path:t:r}
-  ln "$repo_dep_path" "${requester_modules_path}/${repo_dirname}"
+  echo "sourrce: $repo_dep_path"
+  echo "destin: ${requester_modules_path}/${repo_dirname}"
+
+  # Options to hard link:
+  # cp -al $src $dest # https://unix.stackexchange.com/a/202431
+  # cp -lR $src $dest # https://superuser.com/a/1523307
+  local result
+  if ! result=$(cp -al "$repo_dep_path" "${requester_modules_path}/${repo_dirname}" 2>&1); then
+    printf "ERROR (gdm-linker): ${result}\n" >&2
+    return 1
+  fi
 }
 
 gdm () {
@@ -130,8 +142,11 @@ gdm () {
   declare -A ARGS # all valid argument go here (except --help).
   ARGS[initialize]='^[-]{0,2}init.*$'
   ARGS[configure]='^[-]{0,2}conf.*$'
-  # ARGS[remove]='^[-]{0,2}(remove|rm)(=.*)?$'
-  # ARGS[list]='^[-]{0,2}(list|ls)(=.*)?$'
+  # ARGS[clean_modules]='^[-]{0,2}clean([=-]modules|[=-]local)?$'
+  # ARGS[clean_store]='^[-]{0,2}clean([=-]store|[=-]glob|[=-]global)$'
+  ARGS[list_modules]='^[-]{0,2}(list|ls)([=-]modules|[=-]local)?$'
+  # ARGS[list_store]='^[-]{0,2}(list|ls)([=-]store|[=-]glob|[=-]global)$'
+
 
   # An anonymous function (self executing) to check for invalid arguments:
   local not_valid_arg='() {
@@ -143,25 +158,30 @@ gdm () {
 
   if eval ${not_valid_arg} "$1" ; then
     printf "Usage: call with\n  --init    to generate empty configuration file or with\n  --conf    to read existing configuration\n"
-    printf "By default, dependencies installed will be placed in ~/GDM_DEPS/ but\n"
-    printf "you can choose your own location by adding to your ~/.zshrc the following:\n  export GDM_DEPS_DIR=\"/desired/path/to/directory/\"\n"
+    printf "By default, dependencies installed will be placed in ~/GDM_STORE/ but\n"
+    printf "you can choose your own location by adding to your ~/.zshrc the following:\n  export GDM_STORE_DIR=\"/desired/path/to/directory/\"\n"
     return 0
   fi
 
   local gdm_verify='() {
-    if ! (( ${+GDM_DEPS_DIR} )) ; then
-      export GDM_DEPS_DIR="$HOME/GDM_DEPS"
+    if ! (( ${+GDM_STORE_DIR} )) ; then
+      export GDM_STORE_DIR="$HOME/GDM_STORE"
     fi
-    if ! [ -d "$GDM_DEPS_DIR" ] ; then
-      if ! mkdir "$GDM_DEPS_DIR" ; then 
-        ! (($@[(Ie)--quiet-fail])) && printf "ERROR in ${GDM_CMD_DIR}: mkdir ${GDM_DEPS_DIR} failed.\n"  >&2 
-        unset GDM_DEPS_DIR
+    if ! [ -d "$GDM_STORE_DIR" ] ; then
+      if ! mkdir "$GDM_STORE_DIR" ; then 
+        ! (($@[(Ie)--quiet-fail])) && printf "ERROR in ${GDM_CMD_DIR}: mkdir ${GDM_STORE_DIR} failed.\n"  >&2 
+        unset GDM_STORE_DIR
         return 1
       fi
     else
-      ! (($@[(Ie)--quiet-pass])) && printf "GDM_DEPS_DIR=${GDM_DEPS_DIR}\n"
-      return 0
+      ! (($@[(Ie)--quiet-pass])) && printf "GDM_STORE_DIR=${GDM_STORE_DIR}\n"
     fi
+    if ! (( ${+GDM_MODULES_DIRNAME} )) ; then
+      ! (($@[(Ie)--quiet-pass])) && printf "setting GDM_MODULES_DIRNAME \n"
+      export GDM_MODULES_DIRNAME="GDM_MODULES"
+    fi
+    ! (($@[(Ie)--quiet-pass])) && printf "GDM_MODULES_DIRNAME=${GDM_MODULES_DIRNAME}\n"
+    return 0
   }'
 
   if ! eval ${gdm_verify} "--quiet-pass" && return 1;
@@ -203,12 +223,13 @@ gdm () {
       local repo_dirname=$dep_params[4]
       [[ -z "$repo_dirname" ]] || [[ "$repo_dirname" == "#" ]] && repo_dirname=${remote_url:t:r} 
 
-      cd "$GDM_DEPS_DIR"
+      cd "$GDM_STORE_DIR"
 
-      if ! [ -d "${GDM_DEPS_DIR}/repo_dirname" ] ; then 
+      if ! [ -d "${GDM_STORE_DIR}/${repo_dirname}" ] ; then 
         # validate that $remote_url can be cloned:
         if ! git ls-remote --exit-code "$remote_url" >/dev/null 2>&1 ; then
           local fwslashes=$(echo "$remote_url" | grep -o "/"  | wc -l | xargs)
+
           if [[ $fwslashes == 1 ]] ; then   # github is assumed...
             remote_url="https://github.com/$remote_url"
           elif [[ $fwslashes == 2 ]] ; then # incomplete url but with domain...
@@ -218,17 +239,21 @@ gdm () {
             printf "ERROR: Cannot clone \"$remote_url\"\n" >&2
             continue
           fi
+
           if ! git ls-remote --exit-code "$remote_url" >/dev/null 2>&1 ; then
             errors+=("  Skipped: ${dep_params}\n   Reason: Cannot clone \"$remote_url\"\n")
             printf "ERROR: Cannot clone \"$remote_url\"\n" >&2
             continue
           fi
         fi
-        git clone "$remote_url" "$repo_dirname"
+        if ! git clone "$remote_url" "$repo_dirname" ; then
+          errors+=("  Skipped: ${dep_params}\n   Reason: Cannot clone \"$remote_url\"\n")
+          printf "ERROR: Cannot clone \"$remote_url\"\n" >&2
+          continue
+        fi
       fi
       cd "$repo_dirname"
       
-
       #.... switch to branch, if specifed ...........................
 
       local branch=$dep_params[2]
@@ -278,7 +303,7 @@ gdm () {
           ! [[ -z "$commit_target" ]] && shorthash=$(echo $commit_target | cut -d " " -f1)
           if [[ -z "$shorthash" ]] ; then
             errors+=("  Skipped: ${dep_params}\n   Reason: commit log search string ($commit) not found in git log\n")
-            printf "ERROR: Commit log search string (${commit}) not found in git log\!\n" >&2
+            printf "ERROR: Commit log search string (${commit}) not found in git log! \n" >&2
             continue
           fi
           echo "Requested: $commit_target"
@@ -292,24 +317,22 @@ gdm () {
       
       if [ ${#dep_params[@]} -lt 5 ] ; then 
         printf "Executing gdm-linker...\n"
-        if gdm-linker "${GDM_DEPS_DIR}/repo_dirname" "$CALLER_DIR"; then
+        if gdm-linker "${GDM_STORE_DIR}/${repo_dirname}" "$CALLER_DIR"; then
           printf "done."
         else
-          printf "\nFAILED."  >&2
+          printf "gdm-linker FAILED! \n"  >&2
           errors+=("  Incomplete: ${dep_params}\n   Reason: gdm-linker failed\n")
-          printf "ERROR: gdm-linker failed\!\n" 
           continue
         fi
       else 
         printf "Executing provided hooks..."
         for i in {5..$#dep_params}; do
           printf " ${dep_params[$i]}()..."
-          if $dep_params[$i] "${GDM_DEPS_DIR}/repo_dirname" "$CALLER_DIR"; then
+          if $dep_params[$i] "${GDM_STORE_DIR}/${repo_dirname}" "$CALLER_DIR"; then
             printf "done."
           else
-            printf "\nFAILED. Skipping remaining hooks"
+            printf "${dep_params[$i]} execution FAILED! Skipping remaining hooks\n"  >&2
             errors+=("  Incomplete: ${dep_params}\n   Reason: ${dep_params[$i]} returned error any remaining were skipped\n")
-            printf "ERROR: ${dep_params[$i]} returned error any remaining were skipped\\!\n" >&2
             continue
           fi
         done
@@ -324,14 +347,45 @@ gdm () {
       printf "Completed, with the following errors:\n"
       printf $errors >&2
     else
-      printf "Completed without errors\!\n"
+      printf "Completed without errors! \n"
     fi
-
-  # elif [[ "$1" =~ ${ARGS[remove]} ]] ; then ...; fi
 
   # elif [[ "$1" =~ ${ARGS[list]} ]] ; then ...; fi
 
+  elif [[ "$1" =~ ${ARGS[list_modules]} ]] ; then
+    if ! [ -d "${CALLER_DIR}/${GDM_MODULES_DIRNAME}" ] ; then
+      echo "${CALLER_DIR}/${GDM_MODULES_DIRNAME} does not exist! \n"  >&2
+      return 1
+    fi
+    # local module_dir
+    echo  "${CALLER_DIR}/${GDM_MODULES_DIRNAME}"
+    for module_dir in "${CALLER_DIR}/${GDM_MODULES_DIRNAME}/*" ; do
+      if [ -d "${$module_dir}/.git" ] ; then
+        
+        
+        # cd "${CALLER_DIR}/${GDM_MODULES_DIRNAME}/${module_dir}"
+        # local origin=$(git config --get remote.origin.url)
+        # local repo_name=${origin:t:r} 
+        # local current_branch=$(git rev-parse --abbrev-ref HEAD)
+        # local msg="$module_dir"
+        # [[ "$repo_name" !=  "$module_dir" ]] && msg="$message ($repo_name)"
+
+        # if [[ $current_branch == HEAD ]]; then
+        #   local curr_commit=$(echo $git_log | grep $(git rev-parse --short HEAD))
+        #   msg="$msg $curr_commit"
+        #   echo "${GDM_MODULES_DIRNAME}/${module_dir} ()"
+        # fi
+
+      fi
+      echo "$module_dir"
+    done
+  else
+    printf "Something went wrong! \n" >&2
+    return 1
   fi
+
+  
+
 }
 if [[ $ZSH_EVAL_CONTEXT == 'toplevel' ]]; then
   # We're not being sourced so run this script as a command
