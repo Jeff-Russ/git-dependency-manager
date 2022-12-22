@@ -144,6 +144,9 @@ git-expand-remote-url() {
   echo "$remote_url"
   return 0
 }
+
+
+
 gdm () {
   local CALLER_DIR=$(pwd)
 
@@ -172,18 +175,27 @@ gdm () {
   fi
 
   gdm-verify-paths() {
-    
+    ! (($@[(Ie)--quiet-pass])) && printf "Verifying all required paths...\n"
+    local project_path="$1"
+
+    local glob_path_was_unset=false
+
     if ! (( ${+GDM_GLOB_STORE_PATH} )) ; then
       printf "GDM_GLOB_STORE_PATH is not set\n"
       export GDM_GLOB_STORE_PATH="$HOME/gdm_glob_store"
-      if ! [ -d "$GDM_GLOB_STORE_PATH" ] ; then
-        if ! mkdir "$GDM_GLOB_STORE_PATH" ; then 
-          ! (($@[(Ie)--quiet-fail])) && printf "ERROR in ${GDM_CMD_DIR}: mkdir ${GDM_GLOB_STORE_PATH} failed.\n"  >&2 
-          unset GDM_GLOB_STORE_PATH
-          return 1
-        fi
+      glob_path_was_unset=true
+    fi
+
+    if ! [ -d "$GDM_GLOB_STORE_PATH" ] ; then # make the directory
+      ! (($@[(Ie)--quiet-pass])) && printf "mkdir ${GDM_GLOB_STORE_PATH}\n"
+      if ! mkdir "$GDM_GLOB_STORE_PATH" ; then 
+        printf "ERROR: mkdir ${GDM_GLOB_STORE_PATH} failed.\n"  >&2 
+        unset GDM_GLOB_STORE_PATH
+        return 1
       fi
-      printf "GDM_GLOB_STORE_PATH=${GDM_GLOB_STORE_PATH}\n"
+    fi
+
+    if $glob_path_was_unset ; then # write to rc file should be after we know if making it failed
       # https://stackoverflow.com/questions/20572934/get-the-name-of-the-caller-script-in-bash-script
       if ! CALLER_SHELL=$(ps -o comm= $PPID) ; then
         if ! CALLER_SHELL=$(ps $PPID | tail -n 1 | awk "{print \$5}") ; then
@@ -191,24 +203,32 @@ gdm () {
         fi
       fi
       CALLER_SHELL=${CALLER_SHELL:t:r} 
-
-
-
       local rcfile="${HOME}/.${CALLER_SHELL}rc"
-      ! [ -f "$rcfile" ] && touch "$rcfile"
-      printf "$CALLER_SHELL shell detected. Appending to $rcfile \n"
-      echo "\\nexport GDM_GLOB_STORE_PATH=\"\$HOME/gdm_glob_store\"" >> "$rcfile"
+      if ! grep -sq '^[^#]*export GDM_GLOB_STORE_PATH=[^#][^#][^#]' "$rcfile" ; then
+        printf "$CALLER_SHELL shell detected. Appending to $rcfile \n"
+        ! [ -f "$rcfile" ] && touch "$rcfile"
+        echo "\\nexport GDM_GLOB_STORE_PATH=\"\$HOME/gdm_glob_store\"" >> "$rcfile"
+      fi
+      printf "GDM_GLOB_STORE_PATH=${GDM_GLOB_STORE_PATH}\n"
     fi
-    
-    if ! (( ${+GDM_MODULES_DIRNAME} )) ; then
+
+
+    if ! (( ${+GDM_MODULES_DIRNAME} )) ; then # when unset? when gdm_config was not read or did not export it.
       ! (($@[(Ie)--quiet-pass])) && printf "setting GDM_MODULES_DIRNAME \n"
       export GDM_MODULES_DIRNAME="gdm_modules"
+    fi
+    if ! [[ -z  "$project_path" ]] && ! [ -d "${project_path}/${GDM_MODULES_DIRNAME}" ]; then 
+      printf "mkdir ${project_path}/${GDM_MODULES_DIRNAME}\n"
+      if ! mkdir "${project_path}/${GDM_MODULES_DIRNAME}" ; then
+        printf "ERROR: mkdir ${project_path}/${GDM_MODULES_DIRNAME} failed.\n"  >&2 
+        return 1;
+      fi
     fi
     return 0
   }
 
 
-  #-------------------------------------------------------------------------------------------
+ #___________________________________________________________________________________________
   # Generate template of gdm_conf.zsh (although they could just make it themselves)
   if [[ "$1" =~ ${ARGS[initialize]} ]] ; then 
     local gdm_conf_file="${CALLER_DIR}/gdm_conf.zsh"
@@ -219,7 +239,7 @@ gdm () {
     printf "${CALLER_DIR}/gdm_conf.zsh configuration file generated.\n"
     return 0
 
-  #-------------------------------------------------------------------------------------------
+  #___________________________________________________________________________________________
   # Read currently existing configuration file and set up all dependencies 
   # (usually for a given project unless they bypass the gdm_linker)
   elif [[ "$1" =~ ${ARGS[configure]} ]] ;then 
@@ -227,12 +247,11 @@ gdm () {
     ! [[ -f "./gdm_conf.zsh" ]] && printf "Error: No gdm_conf.zsh was found!" >&2 && return 1;
     source ./gdm_conf.zsh
 
-    if ! gdm-verify-paths "--quiet-pass" && return 1;
-    export GDM_GLOB_STORE_PATH="$HOME/gdm_glob_store"
+    ! gdm-verify-paths "$CALLER_DIR" "--quiet-pass" && return 1;
 
     local required_deps=("${(f)$(gdm_conf)}")
+    printf "------------------------------------------------------------\n"
     printf "${#required_deps[@]} requirement(s) read.\n"
-
 
     local errors=() # for displaying summary after entire operation is complete.
     LINKED_MODULES=() # keep track of directories in "${CALLER_DIR}/${GDM_MODULES_DIRNAME}/*"
@@ -252,15 +271,17 @@ gdm () {
       local repo_dirname=$dep_params[4]
       [[ -z "$repo_dirname" ]] && repo_dirname=${remote_url:t:r} 
 
-      cd "$GDM_GLOB_STORE_PATH"
+      ! cd "$GDM_GLOB_STORE_PATH" && printf "FATAL ERROR: cd $GDM_GLOB_STORE_PATH FAILED\n" >&2 && return 1;
+      pwd
 
       if ! [ -d "${GDM_GLOB_STORE_PATH}/${repo_dirname}" ] ; then 
-        # validate that $remote_url can be cloned:
+        # validate that $remote_url can be cloned and clone
         remote_url=$(git-expand-remote-url "$remote_url")
+
+        echo "cloning ${remote_url} to ${GDM_GLOB_STORE_PATH}/${repo_dirname}\n"
         if [[ -z "$remote_url" ]] || ! git clone "$remote_url" "$repo_dirname" ; then
           errors+=("  Skipped: ${dep_params}\n   Reason: Cannot clone \"$remote_url\"\n")
-          printf "ERROR: Cannot clone \"$remote_url\"\n" >&2
-          continue
+          printf "ERROR: Cannot clone \"$remote_url\"\n" >&2 && continue
         fi
       fi
       cd "$repo_dirname"
@@ -285,14 +306,12 @@ gdm () {
         if ! (($loc_branches[(Ie)$branch])) ; then # If the desired $branch was never pulled to local repo...
           if ! git pull "$origin_name" "$branch" ; then
             errors+=("  Skipped: ${dep_params}\n   Reason: Execution of the following failed: git pull ${origin_name} ${branch}\n")
-            printf "ERROR: Execution of the following failed: git pull ${origin_name} ${branch}\n" >&2
-            continue
+            printf "ERROR: Execution of the following failed: git pull ${origin_name} ${branch}\n" >&2 && continue
           fi
         fi
         if ! git checkout "$branch" ; then
           errors+=("  Skipped: ${dep_params}\n   Reason:  Execution of the following failed: git checkout ${branch}\n")
-          printf "ERROR: Execution of the following failed: git checkout ${branch}\n" >&2
-          continue
+          printf "ERROR: Execution of the following failed: git checkout ${branch}\n" >&2 && continue
         fi
       elif ! git pull "$origin_name" "$branch" ; then
         # We still pull even though the branch was found locally. But we can recover if this fails by using local branch.
@@ -314,8 +333,7 @@ gdm () {
           ! [[ -z "$commit_target" ]] && shorthash=$(echo $commit_target | cut -d " " -f1)
           if [[ -z "$shorthash" ]] ; then
             errors+=("  Skipped: ${dep_params}\n   Reason: commit log search string (${dep_params[3]}) not found in git log\n")
-            printf "ERROR: Commit log search string (${dep_params[3]}) not found in git log! \n" >&2
-            continue
+            printf "ERROR: Commit log search string (${dep_params[3]}) not found in git log! \n" >&2 && continue
           fi
           printf "Requested: ${commit_target}\n"
           git switch "$shorthash" --detach
@@ -326,14 +344,13 @@ gdm () {
 
       #.... execute hooks, if specifed ..............................
 
-     
       gdm_linker() {
         local GDM_GLOB_STORE_PATH="$1"
         local repo_dirname="$2"
         local project_path="$3"
         local GDM_MODULES_DIRNAME="$4"
 
-        echo "linking $repo_dirname"
+        echo "linking ${GDM_GLOB_STORE_PATH}/${repo_dirname} to ${project_path}/${GDM_MODULES_DIRNAME}/${repo_dirname}"
 
         if ! [ -d "${project_path}/${GDM_MODULES_DIRNAME}" ] ; then
           if ! mkdir "${project_path}/${GDM_MODULES_DIRNAME}" ; then 
@@ -343,7 +360,7 @@ gdm () {
         elif [ -d "${project_path}/${GDM_MODULES_DIRNAME}/${repo_dirname}" ] ; then
           rm -rf "${project_path}/${GDM_MODULES_DIRNAME}/${repo_dirname}"
         fi
-        # Options to hard link:
+        # Options for making hard link:
         # cp -al $src $dest # https://unix.stackexchange.com/a/202431
         # cp -lR $src $dest # https://superuser.com/a/1523307
         local result
@@ -361,9 +378,8 @@ gdm () {
       if ! [[ -z "$pre_link_hook" ]] ; then 
         printf "Executing pre_link_hook (${pre_link_hook}) \n"
         if ! eval ${pre_link_hook} "$GDM_GLOB_STORE_PATH" "$repo_dirname" "$CALLER_DIR" "$GDM_MODULES_DIRNAME" ; then
-          printf "pre_link_hook (${pre_link_hook}) FAILED! Skipping any remaining. \n"  >&2
           errors+=("  Incomplete: ${dep_params}\n   Reason: pre_link_hook (${pre_link_hook}) FAILED! Skipping any remaining. \n")
-          continue
+          printf "pre_link_hook (${pre_link_hook}) FAILED! Skipping any remaining. \n"  >&2 && continue
         fi
       fi
 
@@ -372,87 +388,88 @@ gdm () {
         printf "      source: ${GDM_GLOB_STORE_PATH}/${repo_dirname}\n"
         printf " destination: ${CALLER_DIR}/${GDM_MODULES_DIRNAME}/${repo_dirname}\n"
         if ! gdm_linker "$GDM_GLOB_STORE_PATH" "$repo_dirname" "$CALLER_DIR" "$GDM_MODULES_DIRNAME" ; then
-          printf "gdm_linker FAILED! \n"  >&2
           errors+=("  Incomplete: ${dep_params}\n   Reason: gdm_linker failed! \n")
-          continue
+          printf "gdm_linker FAILED! \n"  >&2 && continue
         fi
       else
         printf "Executing linker_bypass_hook (${linker_bypass_hook}) \n"
         if ! eval ${linker_bypass_hook} "$GDM_GLOB_STORE_PATH" "$repo_dirname" "$CALLER_DIR" "$GDM_MODULES_DIRNAME" ; then
-          printf "pre_link_hook (${linker_bypass_hook}) FAILED! \n"  >&2
           errors+=("  Incomplete: ${dep_params}\n   Reason: pre_link_hook (${linker_bypass_hook}) FAILED! \n")
-          continue
+          printf "pre_link_hook (${linker_bypass_hook}) FAILED! \n"  >&2 && continue
         fi
       fi
-
       cd "$CALLER_DIR"
     done
 
+   
+    printf "------------------------------------------------------------\n"    
+    cd "$CALLER_DIR" # just in case last loop cut out (continue) early
 
-    printf "------------------------------------------------------------\n"
+    #.... create link trackers .................................................................
 
-    #.... clean up (rm unused from GDM_MODULES_DIRNAME) ..............................
-    cd "$CALLER_DIR"
+    printf "creating link-tracker(s)\n"
+
+    for _module in $LINKED_MODULES ; do
+      local linked_repo_dirname=${_module:t:r}
+      if [ -d "${GDM_GLOB_STORE_PATH}/${repo_dirname}" ] ; then 
+        local src_tracker="${GDM_GLOB_STORE_PATH}/${linked_repo_dirname}-link-tracker"
+        local req_tracker="${CALLER_DIR}/${GDM_MODULES_DIRNAME}/${linked_repo_dirname}-link-tracker"
+        if ! [ -f "${src_tracker}" ] ; then
+          touch $src_tracker
+          local inode_num=$(ls -i $src_tracker | awk '{print $1;}')
+          echo "\"$inode_num\" \"${GDM_GLOB_STORE_PATH}/${linked_repo_dirname}\"" > $src_tracker
+        fi
+        [ -f "${req_tracker}" ] && rm "$req_tracker"
+        ln "$src_tracker" "$req_tracker"
+    fi
+    done
+
+    #.... clean up unused in both project and global  ..............................
+
+    printf "Cleaning out unused dependencies\n"
 
     local req_modules_cnt=${#LINKED_MODULES[@]}
     local found_modules=("${(@f)$(gdm --list-modules)}")
     local found_modules_cnt=${#found_modules[@]}
-    printf "${req_modules_cnt} required modules in ./${GDM_MODULES_DIRNAME}\n"
-    
 
-    # TODO: remove by *-link-tracker (don't remove any that don't have *-link-tracker
-    # and remove all *-link-tracker for those removed).
+
     if [[ $found_modules_cnt -gt $req_modules_cnt ]]; then
-
-      # printf "${found_modules_cnt} total modules found in ./${GDM_MODULES_DIRNAME}\n"
-      # printf "  Removing unused from ${GDM_MODULES_DIRNAME}....\n"
-
-
+      printf "${req_modules_cnt} required modules in ./${GDM_MODULES_DIRNAME}\n"
+      printf "${found_modules_cnt} total modules found in ./${GDM_MODULES_DIRNAME}\n"
+      printf "  Removing unused from ${GDM_MODULES_DIRNAME}....\n"
       for _module in $found_modules ; do
 
-        if ! (($LINKED_MODULES[(Ie)$_module])) ; then # && [ -f "${src_tracker}" ]  ; then 
-          local repo_dirname=${_module:t:r}
+        if ! (($LINKED_MODULES[(Ie)$_module])) ; then 
+          local unreq_loc_repo_dirname=${_module:t:r}
 
-          if [ -d  "${GDM_GLOB_STORE_PATH}/${repo_dirname}" ] ; then
-            printf "  rm -rf ${_module}  "
-            if rm -rf "${_module}" ; then
-              printf "...Done.\n"
-            else
-              printf "...Failed! \n" 
-              errors+=("  Unable to remove ${_module}\n")
-            fi
-          else
-            printf " Warning: unknown module \"${_module}\" was found but not removed.\n"  >&2
-            errors+=("  Warning: unknown module \"${_module}\" was found but not removed.\n")
+          # Remove only if ${unreq_loc_repo_dirname}-link-tracker is found 
+          if ! [ -f "${_module}-link-tracker" ] ; then
+            errors+=("  Warning: untracked module \"${_module}\" was found but not removed.\n")
+            printf " Warning: untracked module \"${_module}\" was found but not removed.\n"  >&2 && continue
           fi
+          # Remove only if ${unreq_loc_repo_dirname} is found in global store
+          if ! [ -d  "${GDM_GLOB_STORE_PATH}/${unreq_loc_repo_dirname}" ] ; then
+            errors+=("  Warning: unknown module \"${_module}\" was found but not removed.\n")
+            printf " Warning: unknown module \"${_module}\" was found but not removed.\n"  >&2 && continue
+          fi
+
+          printf "  rm -rf ${_module}"
+          if rm -rf "${_module}" ; then printf "...Done.\n"
+          else
+            printf "...Failed! \n" 
+            errors+=("  Unable to remove ${_module}\n")
+          fi
+          printf "  rm  ${_module}-link-tracker"
+          if rm  "${_module}-link-tracker" ; then printf "...Done.\n"
+          else
+            printf "...Failed! \n"
+            errors+=("  Unable to remove ${_module}-link-tracker\n")
+          fi  
         fi
       done
     fi
-    
-
-    #.... create link trackers and clean GDM_GLOB_STORE_PATH ......................................
-
-    printf "creating link-tracker(s)\n"
-
-    local stored_modules=("${(@f)$(gdm --list-store)}")
-
-    for _module in $found_modules ; do
-      local repo_dirname=${_module:t:r}
-      if [ -d "${GDM_GLOB_STORE_PATH}/${repo_dirname}" ] ; then 
-        local src_tracker="${GDM_GLOB_STORE_PATH}/${repo_dirname}-link-tracker"
-        local req_tracker="${CALLER_DIR}/${GDM_MODULES_DIRNAME}/${repo_dirname}-link-tracker"
-        if ! [ -f "${src_tracker}" ] ; then
-          touch $src_tracker
-          local inode_num=$(ls -i $src_tracker | awk '{print $1;}')
-          echo "\"$inode_num ${GDM_GLOB_STORE_PATH}/${repo_dirname}\"" > $src_tracker
-        fi
-        [ -f "${req_tracker}" ] && rm "$req_tracker"
-        ln "$src_tracker" "$req_tracker"
-      fi
-    done
 
     gdm --clean-store
-
 
     #.... Report result .......................................................................
 
@@ -465,7 +482,8 @@ gdm () {
       printf "Completed without errors! \n"
     fi
 
-  #-------------------------------------------------------------------------------------------
+
+  #___________________________________________________________________________________________
   # List project dependencies found in $GDM_MODULES_DIRNAME
   elif [[ "$1" =~ ${ARGS[list_modules]} ]] ; then
     local gdm_modules_dirpath="${CALLER_DIR}/${GDM_MODULES_DIRNAME}"
@@ -477,7 +495,7 @@ gdm () {
     for _item in * ; do [ -d "${_item}" ] && printf "./${GDM_MODULES_DIRNAME}/${_item}\n" ; done
     cd "$CALLER_DIR"
 
-  #-------------------------------------------------------------------------------------------
+  #___________________________________________________________________________________________
   # List original repos found in $GDM_GLOB_STORE_PATH
   elif [[ "$1" =~ ${ARGS[list_store]} ]] ; then
     if ! [ -d "${GDM_GLOB_STORE_PATH}" ] ; then
@@ -488,47 +506,45 @@ gdm () {
     for _item in * ; do [ -d "${_item}" ] && printf "${GDM_GLOB_STORE_PATH}/${_item}\n" ; done
     cd "$CALLER_DIR"
 
-  #-------------------------------------------------------------------------------------------
+  #___________________________________________________________________________________________
   # remove repos found in $GDM_GLOB_STORE_PATH that are not referenced (using *-link-tracker as proxy)
   elif [[ "$1" =~ ${ARGS[clean_store]} ]] ; then
-    printf "cleaning unused from ${GDM_GLOB_STORE_PATH}...\n"
-    local stored_modules=("${(@f)$(gdm --list-store)}")
+    ! gdm-verify-paths "$CALLER_DIR" "--quiet-pass" && return 1;
+    printf "cleaning unused from ${GDM_GLOB_STORE_PATH}\n"
+    local stored_repos=("${(@f)$(gdm --list-store)}")
 
-    for _module in $stored_modules ; do
-      # local repo_dirname=${_module:t:r}
-      local src_tracker="${GDM_GLOB_STORE_PATH}/${_module}-link-tracker"
-      # local req_tracker="${CALLER_DIR}/${GDM_MODULES_DIRNAME}/${repo_dirname}-link-tracker"
-
+    for _stored_repo_path in $stored_repos ; do
+      
+      local _stored_repo_name=${_stored_repo_path:t:r}
+      local src_tracker="${GDM_GLOB_STORE_PATH}/${_stored_repo_name}-link-tracker"
+      
       if [ -f "$src_tracker" ] ; then
-
         local tracker_details=( ${(Q)${(Z+C+)$(ls -li "$src_tracker")}} )
         local tracker_inode="${tracker_details[1]}"
-        local tracker_refcount"${tracker_details[3]}"
+        local tracker_refcount="${tracker_details[3]}"
 
         local inode_storepath=( ${(Q)${(Z+C+)$(cat "$src_tracker")}} )
         local inode_num="${inode_storepath[1]}"
         local store_path_tracked="${inode_storepath[2]}"
-        
-        if [[ $tracker_refcount -eq 1 ]] ; then
-          [ -d "$store_path_tracked" ] && rm -rf "$store_path_tracked" # || we have a tracker not tracking anything, which is fine I guess?
+
+
+        if [[ "$store_path_tracked" != "$_stored_repo_path" ]] ; then
+          printf "Warning: \`cat \${GDM_GLOB_STORE_PATH}/${_stored_repo_name}-link-tracker\` shows it's tracking ${store_path_tracked}.\n"
+        elif [[ $tracker_inode -ne $inode_num ]] ; then
+          printf "Warning: \`cat \${GDM_GLOB_STORE_PATH}/${_stored_repo_name}-link-tracker\` shows an inode that is not it's own!\n"
+          
+        elif [[ $tracker_refcount -eq 1 ]] ; then # REMOVE 
+          printf "Removing used: \${GDM_GLOB_STORE_PATH}/${_stored_repo_name}\n"
+          rm -rf "$_stored_repo_path" # || we have a tracker not tracking anything, which is fine I guess?
           rm "$src_tracker"
-        else
-          local _search_recorded_inode="and\n   cd ~ && find . -inum ${inode_num}\n"
-          if [[ $tracker_inode -ne $inode_num ]] ; then
-            printf "Warning: ${src_tracker} has inode $tracker_inode yet it recorded itself as:\n  ${inode_storepath}\n";
-            printf "  Recommendation: investigate all possible references by running:\n  cd ~ && find . -inum ${tracker_inode} \n${_search_recorded_inode}"
-          fi
-          if ! [ -d "$store_path_tracked" ] ; then 
-            local second_rec=""
-            [[ $tracker_inode -ne $inode_num ]] && second_rec="$_search_recorded_inode"
-            printf "Warning: ${src_tracker} was tracking \"$store_path_tracked\" which does not exist.\n";
-            printf "  Recommendation: investigate all possible references by running:\n  cd ~ && find . -inum ${tracker_inode}\n${second_rec}"
-          fi
+        else printf "${GDM_GLOB_STORE_PATH}/${_stored_repo_name} used in $(( $tracker_refcount - 1))\n"
         fi
+      else 
+        printf "Warning: \${GDM_GLOB_STORE_PATH}/${_stored_repo_name} has no ${_stored_repo_name}-link-tracker file!\n"
       fi
     done
 
-  #-------------------------------------------------------------------------------------------
+  #___________________________________________________________________________________________
   else
     printf "Something went wrong! \n" >&2
     return 1

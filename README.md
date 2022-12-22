@@ -76,7 +76,7 @@ After you set up your  `gdm_conf.zsh`, run the following:
 ./gdm.zsh --conf
 ```
 
-Afterward, everything will be set up for you! By default, you'll have a `GDM_MODULES/` 
+Afterward, everything will be set up for you! By default, you'll have a `gdm_modules/` 
 directory in your project root with your dependencies (you probably should `.gitignore` this)
 but you can choose a different name or bypass this entirely (see `gdm_conf.zsh` comments and
 output from `./gdm.zsh --help` for more information.).   
