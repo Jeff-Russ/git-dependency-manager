@@ -47,10 +47,10 @@ Then, from your project root, run `add-gdm` and the `gdm.zsh`  will be there for
 Usage: calling with
   --init    will generate empty configuration file for your project
   --conf    will read file and perform configuration.
-By default, dependencies are installed (cloned to) ~/GDM_STORE/ 
+By default, dependencies are installed (cloned to) ~/gdm_glob_store/ 
 with hard links to them in your <project-root>/GDM_MODULES
 You can choose your own locations by adding to your ~/.zshrc (for example):
-export GDM_STORE_PATH="/desired/path/to/directory/"
+export GDM_GLOB_STORE_PATH="/desired/path/to/directory/"
 export GDM_MODULES_DIRNAME="included_repos"
 ```
 

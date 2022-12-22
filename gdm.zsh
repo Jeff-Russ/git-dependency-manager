@@ -39,6 +39,9 @@ GDM_CMD_DIR=$(dirname -- "${(%):-%N}")
 
 gdm_conf-template() {
   cat << 'CONFDOC'
+#!/usr/bin/env zsh
+export GDM_MODULES_DIRNAME="gdm_modules" 
+
 gdm_conf() {
 # Each line in HEREDOC is parameterized by same rules as arguments
 #   to shell command (the delimiter is any non-quoted space(s)) 
@@ -70,7 +73,7 @@ gdm_conf() {
 #   (after pull) will be used.
 #   
 # The forth parameter (optional - pass empty quotes "" to skip) can be provided 
-#   a (new) directory name within the $GDM_STORE_PATH to clone to repository 
+#   a (new) directory name within the $GDM_GLOB_STORE_PATH to clone to repository 
 #   to instead of the default (which is the name of the repository: 
 #   the portion after the last / and before .git in the first parameter).
 #   Renaming can be helpful if you are working off of two versions (commit 
@@ -82,21 +85,21 @@ gdm_conf() {
 # 
 # The fifth parameter (optional - pass empty quotes "" to skip) is the name 
 #   of a shell command or function you request to be run after the given 
-#   dependency is set up (cloned to $GDM_STORE_PATH, and with proper branch 
+#   dependency is set up (cloned to $GDM_GLOB_STORE_PATH, and with proper branch 
 #   and commit switched to) but before it is linked to the the project depending 
 #   on it. This may be useful for any setup you needed per-dependency, such 
 #   as building  from source. You can define these commands a functions in this 
 #   file or anywhere, so long as it is available in the shell session. 
 #   This function expects the following four arguments:
-#     $GDM_STORE_PATH   $repo_dirname   $project_path   $GDM_MODULES_DIRNAME
+#     $GDM_GLOB_STORE_PATH   $repo_dirname   $project_path   $GDM_MODULES_DIRNAME
 #   The linker takes these same arguments copies (as hard links):
-#     $GDM_STORE_PATH/$repo_dirname/*
+#     $GDM_GLOB_STORE_PATH/$repo_dirname/*
 #       TO 
 #     $project_path/$GDM_MODULES_DIRNAME/$repo_dirname/*
 #
 # Normally you should not pass a sixth parameter but DOING so bypasses the 
 #   call gdm_linker, which links the cloned repository to your 
-#   <project-root>/$GDM_MODULES_DIRNAME, where GDM_MODULES_DIRNAME="GDM_MODULES"
+#   <project-root>/$GDM_MODULES_DIRNAME, where GDM_MODULES_DIRNAME="gdm_modules"
 #   by default. Bypasssing the linker by specifying "" as this sixth parameter 
 #   is not recommended but you may wish to do something after the linking which, 
 #   can be achieved by passing another callable (again, expecting the same arguments 
@@ -147,6 +150,7 @@ gdm () {
   declare -A ARGS # all valid argument go here (except --help).
   ARGS[initialize]='^[-]{0,2}init.*$'
   ARGS[configure]='^[-]{0,2}conf.*$'
+  ARGS[set_store_path]='^[-]{0,2}(set-)?(-gdm|-GDM)?(glob[-_]store|GLOB[-_]STORE|glob|GLOB|store|STORE)([-_]path|[-_]PATH)?(=.+)?$'
   ARGS[clean_store]='^[-]{0,2}clean([=-]store|[=-]glob|[=-]global)$'
   ARGS[list_modules]='^[-]{0,2}(list|ls)([=-]modules|[=-]local)?$'
   ARGS[list_store]='^[-]{0,2}(list|ls)([=-]store|[=-]glob|[=-]global)$'
@@ -161,34 +165,48 @@ gdm () {
 
   if eval ${not_valid_arg} "$1" ; then
     printf "Usage: calling with\n  --init    will generate empty configuration file for your project\n  --conf    will read file and perform configuration.\n"
-    printf "By default, dependencies are installed (cloned to) ~/GDM_STORE/ \nwith hard links to them in your <project-root>/GDM_MODULES\n"
-    printf "You can choose your own locations by adding to your ~/.zshrc (for example):\n"
-    printf "export GDM_STORE_PATH=\"/desired/path/to/directory/\"\nexport GDM_MODULES_DIRNAME=\"included_repos\"\n"
+    printf "By default, dependencies are installed (cloned to) ~/gdm_glob_store/ \nwith hard links to them in your <project-root>/gdm_modules\n"
+    printf "You can choose your own location by adding to your ~/.zshrc (for example):\n"
+    printf "export GDM_GLOB_STORE_PATH=\"/desired/path/to/directory/\"n"
     return 0
   fi
 
-  local gdm_verify='() {
-    if ! (( ${+GDM_STORE_PATH} )) ; then
-      export GDM_STORE_PATH="$HOME/GDM_STORE"
-    fi
-    if ! [ -d "$GDM_STORE_PATH" ] ; then
-      if ! mkdir "$GDM_STORE_PATH" ; then 
-        ! (($@[(Ie)--quiet-fail])) && printf "ERROR in ${GDM_CMD_DIR}: mkdir ${GDM_STORE_PATH} failed.\n"  >&2 
-        unset GDM_STORE_PATH
-        return 1
+  gdm-verify-paths() {
+    
+    if ! (( ${+GDM_GLOB_STORE_PATH} )) ; then
+      printf "GDM_GLOB_STORE_PATH is not set\n"
+      export GDM_GLOB_STORE_PATH="$HOME/gdm_glob_store"
+      if ! [ -d "$GDM_GLOB_STORE_PATH" ] ; then
+        if ! mkdir "$GDM_GLOB_STORE_PATH" ; then 
+          ! (($@[(Ie)--quiet-fail])) && printf "ERROR in ${GDM_CMD_DIR}: mkdir ${GDM_GLOB_STORE_PATH} failed.\n"  >&2 
+          unset GDM_GLOB_STORE_PATH
+          return 1
+        fi
       fi
-    else
-      ! (($@[(Ie)--quiet-pass])) && printf "GDM_STORE_PATH=${GDM_STORE_PATH}\n"
+      printf "GDM_GLOB_STORE_PATH=${GDM_GLOB_STORE_PATH}\n"
+      # https://stackoverflow.com/questions/20572934/get-the-name-of-the-caller-script-in-bash-script
+      if ! CALLER_SHELL=$(ps -o comm= $PPID) ; then
+        if ! CALLER_SHELL=$(ps $PPID | tail -n 1 | awk "{print \$5}") ; then
+          CALLER_SHELL="zsh"
+        fi
+      fi
+      CALLER_SHELL=${CALLER_SHELL:t:r} 
+
+
+
+      local rcfile="${HOME}/.${CALLER_SHELL}rc"
+      ! [ -f "$rcfile" ] && touch "$rcfile"
+      printf "$CALLER_SHELL shell detected. Appending to $rcfile \n"
+      echo "\\nexport GDM_GLOB_STORE_PATH=\"\$HOME/gdm_glob_store\"" >> "$rcfile"
     fi
+    
     if ! (( ${+GDM_MODULES_DIRNAME} )) ; then
       ! (($@[(Ie)--quiet-pass])) && printf "setting GDM_MODULES_DIRNAME \n"
-      export GDM_MODULES_DIRNAME="GDM_MODULES"
+      export GDM_MODULES_DIRNAME="gdm_modules"
     fi
-    ! (($@[(Ie)--quiet-pass])) && printf "GDM_MODULES_DIRNAME=${GDM_MODULES_DIRNAME}\n"
     return 0
-  }'
+  }
 
-  if ! eval ${gdm_verify} "--quiet-pass" && return 1;
 
   #-------------------------------------------------------------------------------------------
   # Generate template of gdm_conf.zsh (although they could just make it themselves)
@@ -209,8 +227,11 @@ gdm () {
     ! [[ -f "./gdm_conf.zsh" ]] && printf "Error: No gdm_conf.zsh was found!" >&2 && return 1;
     source ./gdm_conf.zsh
 
+    if ! gdm-verify-paths "--quiet-pass" && return 1;
+    export GDM_GLOB_STORE_PATH="$HOME/gdm_glob_store"
+
     local required_deps=("${(f)$(gdm_conf)}")
-    printf "${#required_deps[@]} requirements read.\n"
+    printf "${#required_deps[@]} requirement(s) read.\n"
 
 
     local errors=() # for displaying summary after entire operation is complete.
@@ -231,9 +252,9 @@ gdm () {
       local repo_dirname=$dep_params[4]
       [[ -z "$repo_dirname" ]] && repo_dirname=${remote_url:t:r} 
 
-      cd "$GDM_STORE_PATH"
+      cd "$GDM_GLOB_STORE_PATH"
 
-      if ! [ -d "${GDM_STORE_PATH}/${repo_dirname}" ] ; then 
+      if ! [ -d "${GDM_GLOB_STORE_PATH}/${repo_dirname}" ] ; then 
         # validate that $remote_url can be cloned:
         remote_url=$(git-expand-remote-url "$remote_url")
         if [[ -z "$remote_url" ]] || ! git clone "$remote_url" "$repo_dirname" ; then
@@ -307,7 +328,7 @@ gdm () {
 
      
       gdm_linker() {
-        local GDM_STORE_PATH="$1"
+        local GDM_GLOB_STORE_PATH="$1"
         local repo_dirname="$2"
         local project_path="$3"
         local GDM_MODULES_DIRNAME="$4"
@@ -326,7 +347,7 @@ gdm () {
         # cp -al $src $dest # https://unix.stackexchange.com/a/202431
         # cp -lR $src $dest # https://superuser.com/a/1523307
         local result
-        if ! result=$(cp -al "${GDM_STORE_PATH}/${repo_dirname}" "${project_path}/${GDM_MODULES_DIRNAME}/${repo_dirname}" 2>&1); then
+        if ! result=$(cp -al "${GDM_GLOB_STORE_PATH}/${repo_dirname}" "${project_path}/${GDM_MODULES_DIRNAME}/${repo_dirname}" 2>&1); then
           printf "ERROR (gdm_linker): ${result}\n" >&2
           return 1
         fi
@@ -339,7 +360,7 @@ gdm () {
 
       if ! [[ -z "$pre_link_hook" ]] ; then 
         printf "Executing pre_link_hook (${pre_link_hook}) \n"
-        if ! eval ${pre_link_hook} "$GDM_STORE_PATH" "$repo_dirname" "$CALLER_DIR" "$GDM_MODULES_DIRNAME" ; then
+        if ! eval ${pre_link_hook} "$GDM_GLOB_STORE_PATH" "$repo_dirname" "$CALLER_DIR" "$GDM_MODULES_DIRNAME" ; then
           printf "pre_link_hook (${pre_link_hook}) FAILED! Skipping any remaining. \n"  >&2
           errors+=("  Incomplete: ${dep_params}\n   Reason: pre_link_hook (${pre_link_hook}) FAILED! Skipping any remaining. \n")
           continue
@@ -348,16 +369,16 @@ gdm () {
 
       if [[ -z "$linker_bypass_hook" ]] ; then 
         printf "Executing gdm_linker\n"
-        printf "      source: ${GDM_STORE_PATH}/${repo_dirname}\n"
+        printf "      source: ${GDM_GLOB_STORE_PATH}/${repo_dirname}\n"
         printf " destination: ${CALLER_DIR}/${GDM_MODULES_DIRNAME}/${repo_dirname}\n"
-        if ! gdm_linker "$GDM_STORE_PATH" "$repo_dirname" "$CALLER_DIR" "$GDM_MODULES_DIRNAME" ; then
+        if ! gdm_linker "$GDM_GLOB_STORE_PATH" "$repo_dirname" "$CALLER_DIR" "$GDM_MODULES_DIRNAME" ; then
           printf "gdm_linker FAILED! \n"  >&2
           errors+=("  Incomplete: ${dep_params}\n   Reason: gdm_linker failed! \n")
           continue
         fi
       else
         printf "Executing linker_bypass_hook (${linker_bypass_hook}) \n"
-        if ! eval ${linker_bypass_hook} "$GDM_STORE_PATH" "$repo_dirname" "$CALLER_DIR" "$GDM_MODULES_DIRNAME" ; then
+        if ! eval ${linker_bypass_hook} "$GDM_GLOB_STORE_PATH" "$repo_dirname" "$CALLER_DIR" "$GDM_MODULES_DIRNAME" ; then
           printf "pre_link_hook (${linker_bypass_hook}) FAILED! \n"  >&2
           errors+=("  Incomplete: ${dep_params}\n   Reason: pre_link_hook (${linker_bypass_hook}) FAILED! \n")
           continue
@@ -392,7 +413,7 @@ gdm () {
         if ! (($LINKED_MODULES[(Ie)$_module])) ; then # && [ -f "${src_tracker}" ]  ; then 
           local repo_dirname=${_module:t:r}
 
-          if [ -d  "${GDM_STORE_PATH}/${repo_dirname}" ] ; then
+          if [ -d  "${GDM_GLOB_STORE_PATH}/${repo_dirname}" ] ; then
             printf "  rm -rf ${_module}  "
             if rm -rf "${_module}" ; then
               printf "...Done.\n"
@@ -409,7 +430,7 @@ gdm () {
     fi
     
 
-    #.... create link trackers and clean GDM_STORE_PATH ......................................
+    #.... create link trackers and clean GDM_GLOB_STORE_PATH ......................................
 
     printf "creating link-tracker(s)\n"
 
@@ -417,13 +438,13 @@ gdm () {
 
     for _module in $found_modules ; do
       local repo_dirname=${_module:t:r}
-      if [ -d "${GDM_STORE_PATH}/${repo_dirname}" ] ; then 
-        local src_tracker="${GDM_STORE_PATH}/${repo_dirname}-link-tracker"
+      if [ -d "${GDM_GLOB_STORE_PATH}/${repo_dirname}" ] ; then 
+        local src_tracker="${GDM_GLOB_STORE_PATH}/${repo_dirname}-link-tracker"
         local req_tracker="${CALLER_DIR}/${GDM_MODULES_DIRNAME}/${repo_dirname}-link-tracker"
         if ! [ -f "${src_tracker}" ] ; then
           touch $src_tracker
           local inode_num=$(ls -i $src_tracker | awk '{print $1;}')
-          echo "\"$inode_num ${GDM_STORE_PATH}/${repo_dirname}\"" > $src_tracker
+          echo "\"$inode_num ${GDM_GLOB_STORE_PATH}/${repo_dirname}\"" > $src_tracker
         fi
         [ -f "${req_tracker}" ] && rm "$req_tracker"
         ln "$src_tracker" "$req_tracker"
@@ -457,25 +478,25 @@ gdm () {
     cd "$CALLER_DIR"
 
   #-------------------------------------------------------------------------------------------
-  # List original repos found in $GDM_STORE_PATH
+  # List original repos found in $GDM_GLOB_STORE_PATH
   elif [[ "$1" =~ ${ARGS[list_store]} ]] ; then
-    if ! [ -d "${GDM_STORE_PATH}" ] ; then
-      echo "${GDM_STORE_PATH} (GDM_STORE_PATH) does not exist\n"  >&2
+    if ! [ -d "${GDM_GLOB_STORE_PATH}" ] ; then
+      echo "${GDM_GLOB_STORE_PATH} (GDM_GLOB_STORE_PATH) does not exist\n"  >&2
       return 1
     fi
-    cd "${GDM_STORE_PATH}"
-    for _item in * ; do [ -d "${_item}" ] && printf "${GDM_STORE_PATH}/${_item}\n" ; done
+    cd "${GDM_GLOB_STORE_PATH}"
+    for _item in * ; do [ -d "${_item}" ] && printf "${GDM_GLOB_STORE_PATH}/${_item}\n" ; done
     cd "$CALLER_DIR"
 
   #-------------------------------------------------------------------------------------------
-  # remove repos found in $GDM_STORE_PATH that are not referenced (using *-link-tracker as proxy)
+  # remove repos found in $GDM_GLOB_STORE_PATH that are not referenced (using *-link-tracker as proxy)
   elif [[ "$1" =~ ${ARGS[clean_store]} ]] ; then
-    printf "cleaning unused from ${GDM_STORE_PATH}...\n"
+    printf "cleaning unused from ${GDM_GLOB_STORE_PATH}...\n"
     local stored_modules=("${(@f)$(gdm --list-store)}")
 
     for _module in $stored_modules ; do
       # local repo_dirname=${_module:t:r}
-      local src_tracker="${GDM_STORE_PATH}/${_module}-link-tracker"
+      local src_tracker="${GDM_GLOB_STORE_PATH}/${_module}-link-tracker"
       # local req_tracker="${CALLER_DIR}/${GDM_MODULES_DIRNAME}/${repo_dirname}-link-tracker"
 
       if [ -f "$src_tracker" ] ; then
