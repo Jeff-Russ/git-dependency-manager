@@ -36,56 +36,51 @@
 
 REMOVE_UNTRACKED_GLOBS=false
 
-GDM_CMD_DIR=$(dirname -- "${(%):-%N}")
-# NOTE ${(%):-%N} is zsh's equivalent to ${BASH_SOURCE[0]} (is is the current script's path)
 
 gdm_conf-template() {
-  cat << 'CONFDOC'
+cat << 'CONFDOC'
 #!/usr/bin/env zsh
 export GDM_MODULES_DIRNAME="gdm_modules" 
 
-gdm_conf() {
-# Each line in HEREDOC is parameterized by same rules as arguments
-#   to shell command (the delimiter is any non-quoted space(s)) 
-#   with comments removed (any string with # before it-including inlined).
+# Each non-commented row in CONF_DOC is parameterized (by same delimiting rules 
+#   as arguments to shell command: the delimiter is any non-quoted space(s)) 
 #   
-# The first parameter is the remote url of the repository dependency.
-#   It should be the argument to `git clone` AND, should also match 
-#   (after cloning and cd'ing to it), the value returned from:
-#      git config --get remote.origin.url
-#   However, if "user/repo" is supplied, "https://github.com/user/repo.git"
-#   is assumed. ".git" will always be appended if not found. Likewise 
-#   "domain.com/repo" becomes "https://domain.com/repo.git".
+# 1st parameter: REPOSITORY
+#   This is the remote url of the repository dependency or an abbreviation of it.
+#   Unabbreviated: it should be in the url format passed to `git clone`.
+#   for example: "https://domain.com/username/reponame.git"
+#   Abbreviated: all of the following will be interpreted as the above:
+#   "domain.com/username/reponame.git" OR "domain.com/username/reponame"
+#   OR "username/reponame.git" OR JUST "username/reponame"
 #   
-# The second parameter (optional - pass empty quotes "" to skip) should
-#   be a branch name you want to use. Skipping this parameter by passing
-#   "" chooses the default branch, which is usually "main" or "master".
+# 2nd parameter: BRANCH (optional: empty quotes "" uses default branch) 
+#   The branch name you want to use. Default: usually  "main" or "master".
 #   
-# The third parameter (optional - pass empty quotes "" to skip) is a commit log 
-#   search string, meaning what you pass as this argument will be 
-#   searched for in the commit log and the first match will be the commit
-#   you need. The log format being searched is the return from this:
+# 3rd parameter: COMMIT_SEARCH (optional: pass empty quotes "" to skip) 
+#   Typically used to require an older version of the repository, this 
+#   can either be any substring found in the git log as formatted by:   
 #     git --no-pager log --tags --pretty='%h%d %as (%an) %s'
-#   If the repository commit pushed a tag "7.0.3", this should appear
-#   in the log as "tag: 7.0.3". This log format uses short hashes so 
-#   you can target them instead (for commits between tagged releases).
-#   If the search string is not found, git pull is run on the branch 
-#   and the search is run. If the search fails again, the most recent 
-#   is used. If you skip this parameter the most current commit 
-#   (after pull) will be used.
+#   which you can run to see more details. A more preferred way to use this
+#   parameter is a special syntax: "(tag: <tagvalue>)" for example:
+#     "(tag: v1.2)"
+#   searches a git long only showing commits with tags shown by
+#     git --no-pager log --no-walk --tags --oneline --pretty='%h%d %as (%an) %s'
+#   This actually searches for  "(tag: v1.2" without the closing ')'
+#   because often something is inserted before it in the log that 
+#   is not part of the actual tag. 
 #   
-# The forth parameter (optional - pass empty quotes "" to skip) can be provided 
-#   a (new) directory name within the $GDM_GLOB_STORE_PATH to clone to repository 
-#   to instead of the default (which is the name of the repository: 
-#   the portion after the last / and before .git in the first parameter).
-#   Renaming can be helpful if you are working off of two versions (commit 
-#   points or branches) in a given the repository as a dependency as having
-#   two copies speeds up switching projects as each downloaded clone will 
-#   already be pointing to the branch and commit you need.
-#   If you'd like to skip this parameter (so you can pass hook(s))
-#   and just use the most current commit (after pull), pass ""
+# 4th parameter: REPO_DIRNAME (optional: pass empty quotes "" for default) 
+#   if not provided, the repos will be cloned (if not already) to the 
+#   new directory which defaults to the <reponame>. Skipping this parameter
+#   means that if you require two different branches or commits from the same
+#   repo accross multiple project, `gdm --conf` will need to be run each time
+#   to ensure the single stored repo is in the correct state. This takes 
+#   more time as drive space. It also means requiring two versions at once 
+#   (such as in the same probject or two you may have open at once) is impossible.
+#   For this reason, this 4th parameter enables you to have two states of the
+#   same repository installed at once by cloning it to a distinct directory name.
 # 
-# The fifth parameter (optional - pass empty quotes "" to skip) is the name 
+# 5th parameter: PRELINK_HOOK (optional: pass empty quotes "" to skip) is the name 
 #   of a shell command or function you request to be run after the given 
 #   dependency is set up (cloned to $GDM_GLOB_STORE_PATH, and with proper branch 
 #   and commit switched to) but before it is linked to the the project depending 
@@ -99,7 +94,7 @@ gdm_conf() {
 #       TO 
 #     $project_path/$GDM_MODULES_DIRNAME/$repo_dirname/*
 #
-# Normally you should not pass a sixth parameter but DOING so bypasses the 
+# Normally you should not pass a sixth parameter because doing so bypasses the 
 #   call gdm_linker, which links the cloned repository to your 
 #   <project-root>/$GDM_MODULES_DIRNAME, where GDM_MODULES_DIRNAME="gdm_modules"
 #   by default. Bypasssing the linker by specifying "" as this sixth parameter 
@@ -109,42 +104,26 @@ gdm_conf() {
 #       gdm_linker $@
 #   as the first line in your callable so that the linker is called, followed by 
 #   your custom actions.
-cat << 'HEREDOC'
-# Example
-juce-framework/JUCE develop "tag: 7.0.0" "JUCE_v7" ""
-HEREDOC
+cat << 'CONF_DOC'
+# REPOSITORY                      BRANCH  COMMIT_SEARCH  REPO_DIRNAME  PRELINK_HOOK  LINK_BYPASS
+# -------------------- EXAMPLE ENTRIES --------------------------------------------------------
+# juce-framework/JUCE              develop  tag="7.0.0"     JUCE_v7
+# Jeff-Russ/git-dependency-manager 
+CONF_DOC
 }
 
-# place post-hooks here:
+# example_prelink_hook(){
+#   # do things
+#   # return 0 for success or nonzero to fail
+# } 
 
-no-hooks(){ return 0; } 
+# example_postlink_hook(){
+#   gdm_linker $@
+#   # do things
+#   # return 0 for success or nonzero to fail
+# } 
 
 CONFDOC
-}
-
-
-
-git-expand-remote-url() {
-  # validate that $remote_url can be cloned:
-  local remote_url="$1"
-  if ! git ls-remote --exit-code "$remote_url" >/dev/null 2>&1 ; then
-    local fwslashes=$(echo "$remote_url" | grep -o "/"  | wc -l | xargs)
-
-    if [[ $fwslashes == 1 ]] ; then   # github is assumed...
-      remote_url="https://github.com/$remote_url"
-    elif [[ $fwslashes == 2 ]] ; then # incomplete url but with domain...
-      remote_url="https://$remote_url"
-    else
-      # DO NOT echo anything (no output also indicates failure)
-      return 1  # error: invalid or could not expand to valid url for a clonable git repository.
-    fi
-    if ! git ls-remote --exit-code "$remote_url" >/dev/null 2>&1 ; then
-      # DO NOT echo anything (no output also indicates failure)
-      return 1 # error: invalid or could not expand to valid url for a clonable git repository.
-    fi
-  fi
-  echo "$remote_url"
-  return 0
 }
 
 
@@ -172,7 +151,7 @@ gdm () {
     printf "Usage: calling with\n  --init    will generate empty configuration file for your project\n  --conf    will read file and perform configuration.\n"
     printf "By default, dependencies are installed (cloned to) ~/gdm_glob_store/ \nwith hard links to them in your <project-root>/gdm_modules\n"
     printf "You can choose your own location by adding to your ~/.zshrc (for example):\n"
-    printf "export GDM_GLOB_STORE_PATH=\"/desired/path/to/directory/\"n"
+    printf "export GDM_GLOB_STORE_PATH=\"/desired/path/to/directory/\"\n"
     return 0
   fi
 
@@ -183,7 +162,6 @@ gdm () {
     local glob_path_was_unset=false
 
     if ! (( ${+GDM_GLOB_STORE_PATH} )) ; then
-      printf "GDM_GLOB_STORE_PATH is not set\n"
       export GDM_GLOB_STORE_PATH="$HOME/gdm_glob_store"
       glob_path_was_unset=true
     fi
@@ -207,11 +185,13 @@ gdm () {
       CALLER_SHELL=${CALLER_SHELL:t:r} 
       local rcfile="${HOME}/.${CALLER_SHELL}rc"
       if ! grep -sq '^[^#]*export GDM_GLOB_STORE_PATH=[^#][^#][^#]' "$rcfile" ; then
-        printf "$CALLER_SHELL shell detected. Appending to $rcfile \n"
         ! [ -f "$rcfile" ] && touch "$rcfile"
+        printf "$CALLER_SHELL shell detected. Appending to ${rcfile}:\n"
+        printf "export GDM_GLOB_STORE_PATH=\"\$HOME/gdm_glob_store\"\n"
         echo "\\nexport GDM_GLOB_STORE_PATH=\"\$HOME/gdm_glob_store\"" >> "$rcfile"
       fi
-      printf "GDM_GLOB_STORE_PATH=${GDM_GLOB_STORE_PATH}\n"
+    else
+      ! (($@[(Ie)--quiet-pass])) && printf "GDM_GLOB_STORE_PATH=${GDM_GLOB_STORE_PATH}\n"
     fi
 
 
@@ -246,60 +226,63 @@ gdm () {
   # (usually for a given project unless they bypass the gdm_linker)
   elif [[ "$1" =~ ${ARGS[configure]} ]] ;then 
     
-    ! [[ -f "./gdm_conf.zsh" ]] && printf "Error: No gdm_conf.zsh was found!" >&2 && return 1;
-    source ./gdm_conf.zsh
+    # ! [[ -f "./gdm_conf.zsh" ]] && printf "Error: No \"gdm_conf.zsh\" file was found! \n" >&2 && return 1;
+    # source ./gdm_conf.zsh
+
+    ! gdm_conf_params readfile "$gdm_conf_filename_default" && return 1;
 
     ! gdm-verify-paths "$CALLER_DIR" "--quiet-pass" && return 1;
-
-    local required_deps=("${(f)$(gdm_conf)}")
 
     local errors=() # for displaying summary after entire operation is complete.
     LINKED_MODULES=() # keep track of directories in "${CALLER_DIR}/${GDM_MODULES_DIRNAME}/*"
                       # actually required so we can delete unneeded ones aftewards.
     printf "\n"
-    for dep in $required_deps ;
-    do
-      local dep_params=( ${(Q)${(Z+C+)dep}} )
-      [[ ${#dep_params[@]} -eq 0 ]] && continue; # empty or commented line in list of deps
+
+    req_num=1
+    while req=$(gdm_conf_params "req[$req_num]" --quiet) ; do
+
+      local req_params=( ${(Q)${(Z+C+)req}} )
+      local remote_url=$req_params[1]
+      [[ $remote_url == "#" ]] && continue
       printf "------------------------------------------------------------\n"
-      printf "      Found Requirement in gdm_conf.zsh:\n${dep}\n"
-      #.... clone repo or cd to it ..................................
+      printf "      Requirement #${req_num} from ${gdm_conf_filename_default}:\n"
+      (( req_num++ ))
 
-      local remote_url=$dep_params[1]
-      [[ "$remote_url" != *".git" ]] && remote_url="${remote_url}.git"
-
-      local repo_dirname=$dep_params[4]
-      [[ -z "$repo_dirname" ]] && repo_dirname=${remote_url:t:r} 
+      local branch=$( [[ "${req_params[2]}" == "#" ]] && echo "" || echo "${req_params[2]}")
+      local commit=$( [[ "${req_params[3]}" == "#" ]] && echo "" || echo "${req_params[3]}")
+      local repo_dirname=$( [[ "${req_params[4]}" == "#" ]] && echo "" || echo "${req_params[4]}")
+      local pre_link_hook=$( [[ "${req_params[5]}" == "#" ]] && echo "" || echo "${req_params[5]}")
+      local linker_bypass_hook=$( [[ "${req_params[6]}" == "#" ]] && echo "" || echo "${req_params[6]}")
+      
+      local req_details="$remote_url branch=$branch dir=$repo_dirname"
+      ! [[ -z $pre_link_hook ]] && req_details="$req_details pre_link_hook=$pre_link_hook"
+      ! [[ -z $linker_bypass_hook ]] && req_details="$req_details linker_bypass_hook=$linker_bypass_hook"
+      printf "$req_details \n"
+      
+      
+      #.... clone repo or cd to it and find branch ..................................
 
       ! cd "$GDM_GLOB_STORE_PATH" && printf "FATAL ERROR: cd $GDM_GLOB_STORE_PATH FAILED\n" >&2 && return 1;
 
       if ! [ -d "${GDM_GLOB_STORE_PATH}/${repo_dirname}" ] ; then 
         # validate that $remote_url can be cloned and clone
-        remote_url=$(git-expand-remote-url "$remote_url")
+        remote_url=$(git_expand_remote_url "$remote_url")
 
-        printf "Cloning ${remote_url} to ${GDM_GLOB_STORE_PATH}/${repo_dirname}\n"
+        printf "Cloning ${remote_url} to \$GDM_GLOB_STORE_PATH/${repo_dirname}\n"
         if [[ -z "$remote_url" ]] || ! git clone "$remote_url" "$repo_dirname" --quiet ; then
           errors+=("  Skipped: ${dep_params}\n   Reason: Cannot clone \"$remote_url\"\n")
           printf "ERROR: Cannot clone \"$remote_url\"\n" >&2 && continue
         fi
+      else
+        echo "${repo_dirname} was previously installed in \$GDM_GLOB_STORE_PATH"
       fi
       cd "$repo_dirname"
-      
-      printf "Finding correct branch...\n"
 
-      local branch=$dep_params[2]
+      #....  find branch ................................................................
       
-      local current_branch=$(git rev-parse --abbrev-ref HEAD) # if head is detached, current_branch will be "HEAD"
       local remote_names=("${(f)$(git remote)}")
       local origin_name=$( (($remote_names[(Ie)origin])) && echo origin || echo "${remote_names[1]}" )
 
-      if [[ -z "$branch" ]] || [[ "$branch" == "HEAD" ]] || [[ "$current_branch" == "HEAD" ]] ; then
-        # Set to default branch (usually main or master).
-        branch=$(git remote show "$(git config --get remote.origin.url)" | sed -n '/HEAD branch/s/.*: //p')
-        #  if we're in detached head state ("$current_branch" == "HEAD"), it will be fixed when we run
-        # git checkout "$branch"
-        # This if block assumes the default branch was not deleted locally!!! (probably safe though)
-      fi
       if [[ "$branch" != "$current_branch" ]] ; then
         local loc_branches=("${(f)$(git branch --format='%(refname:short)')}")
         if ! (($loc_branches[(Ie)$branch])) ; then # If the desired $branch was never pulled to local repo...
@@ -326,22 +309,48 @@ gdm () {
 
       #.... switch commit, if specifed ..............................
 
-      printf "Finding correct commit...\n"
-      local commit=$dep_params[3]
 
       if ! [[ -z "$commit" ]] ; then 
-        local git_log=$(git --no-pager log --tags --pretty='%h%d %as (%an) %s')
+        local commit_backup="" # empty means not a tag search, full means it's backup of
+
+        local git_log=""
+
+        if [[ "$commit" =~ '(^tag[:=].+|\(tag[:=].*\))' ]] ; then 
+          # if commit is (tag:TAGVAL) OR (tag=TAGVAL) OR tag:TAGVAL OR tag=TAGVAL then 
+          # get TAGVAL and search for it in git long only containing commits that have tags:
+          local first_idx=5
+          local last_idx=-1
+          if [[ "${commit[1]}" == "(" ]] ; then 
+            first_idx=6
+            last_idx=-2
+          fi
+          # Get tag substring and remove leanding/trailing spaces;
+          local tag=$(echo "${commit[$first_idx,$last_idx]}" | xargs)
+          commit_backup="$commit"
+          commit="(tag: $tag" # reform to format seen in git log output (leaving off ')' is intentional!)
+          printf "Searching git log for commit with the tag \"$tag\"\n"
+          git_log=$(git --no-pager log --no-walk --tags --oneline --pretty='%h%d %as (%an) %s') # only tagged
+        else
+          printf "Searching git log for the commit containing \"$commit\" \n"
+          git_log=$(git --no-pager log --tags --pretty='%h%d %as (%an) %s') # all commits, but also showing tagged
+        fi
         # local curr_hash=$(git rev-parse --short HEAD)
         # local curr_commit=$(echo $git_log | grep $curr_hash)
 
         # printf "Currently: ${curr_commit} (hash: $curr_hash)\n"
         # if ! echo $curr_commit | grep -q $commit ; then
-          commit_target=$(echo $git_log | grep $commit)
+          local commit_target=$(echo $git_log | grep $commit)
           local shorthash=""
           ! [[ -z "$commit_target" ]] && shorthash=$(echo $commit_target | cut -d " " -f1)
           if [[ -z "$shorthash" ]] ; then
-            errors+=("  Skipped: ${dep_params}\n   Reason: Commit log search string \"${dep_params[3]}\" not found in git log\n")
-            printf "ERROR: Commit log search string \"${dep_params[3]}\" not found in git log! \n" >&2 && continue
+            if [[ -z "$commit_backup" ]] ; then # tag search failed: retry as normal log search
+              commit_target=$(echo $git_log | grep $commit_backup)
+              ! [[ -z "$commit_target" ]] && shorthash=$(echo $commit_target | cut -d " " -f1)
+            fi
+            if [[ -z "$shorthash" ]] ; then
+              errors+=("  Skipped: ${dep_params}\n   Reason: Commit log search string \"${dep_params[3]}\" not found in git log\n")
+              printf "ERROR: Commit log search string \"${dep_params[3]}\" not found in git log! \n" >&2 && continue
+            fi
           fi
           printf "Requested: ${commit_target}\n"
           git switch "$shorthash" --detach
@@ -379,9 +388,6 @@ gdm () {
         # Register that the requirement as has been added to GDM_MODULES_DIRNAME so we can clean up (rm un-required) afterward:
         LINKED_MODULES+=("./${GDM_MODULES_DIRNAME}/${repo_dirname}") 
       }
-      
-      local pre_link_hook=$dep_params[5]
-      local linker_bypass_hook=$dep_params[5]
 
       if ! [[ -z "$pre_link_hook" ]] ; then 
         printf "Executing pre_link_hook (${pre_link_hook}) \n"
@@ -412,7 +418,6 @@ gdm () {
     printf "____________________________________________________________\n"
     
     cd "$CALLER_DIR" # just in case last loop cut out (continue) early
-
 
     printf "--- Creating link-tracker(s) -------------------------------\n"   
     for _module in $LINKED_MODULES ; do
@@ -554,8 +559,117 @@ gdm () {
     printf "Something went wrong! \n" >&2
     return 1
   fi
-
 }
+
+
+local gdm_conf_param_names=(REPOSITORY BRANCH COMMIT_SEARCH REPO_DIRNAME PRELINK_HOOK LINK_BYPASS)
+local gdm_conf_raw_lines=()
+local gdm_conf_file_code=99
+local gdm_conf_filename_default="./gdm_conf.zsh"
+local gdm_conf_filename=""
+
+
+gdm_conf_params () {
+  local quiet=false
+  (($@[(Ie)--quiet])) && quiet=true
+
+  local debug=false
+  (($@[(Ie)--debug])) && debug=true
+
+  if [[ $1 == "readfile" ]] ; then
+    gdm_conf_raw_lines=()
+    if [[ -z "$gdm_conf_filename" ]]; then
+      local gdm_conf_filename="$2"
+      [[ -z "$gdm_conf_filename" ]] ||  [[ "$gdm_conf_filename" == "--quiet" ]] && gdm_conf_filename="$gdm_conf_filename_default"
+    fi
+    local file="$gdm_conf_filename"
+    
+    ! [[ -f "$file" ]] && gdm_conf_file_code=1  && ! $quiet && printf "Error: \"$file\" file not found! \n" >&2 && return $gdm_conf_file_code ;
+
+    local conf_doc=$(source ./gdm_conf.zsh)
+    [[ -z "$conf_doc" ]] && gdm_conf_file_code=2 && ! $quiet && printf "Error: \"$file\" has no output! \n" >&2 && return $gdm_conf_file_code ;
+    local gdm_conf_lines_temp=("${(f)$(echo $conf_doc)}")
+
+    for line in $gdm_conf_lines_temp ; do
+      ! [[ "$line" =~ '^ *#' ]] && gdm_conf_raw_lines+=($line)
+    done
+    [[ ${#gdm_conf_raw_lines[@]} -eq 0 ]]  && gdm_conf_file_code=3 && ! $quiet && printf "Warning: \"$file\" has no requirements! \n" >&2 && return $gdm_conf_file_code ;
+
+    ! $quiet && printf "Found ${#gdm_conf_raw_lines[@]} requirements in  \"$file\"\n"
+    gdm_conf_file_code=0
+
+  elif [[ $1 =~ '^(req|requirement)[-_](count|cnt)' ]] ; then printf ${#gdm_conf_raw_lines[@]}
+
+  elif [[ $1 =~ '^(req|requirement)\[[1-9][0-9]*\]$' ]]  ; then
+    if [[ $gdm_conf_file_code -ne 0 ]] ; then
+      [[ $gdm_conf_file_code -eq 99 ]] && $quiet && gdm_conf_params readfile --quiet || gdm_conf_params readfile
+    fi
+    local req_idx=$(echo $1 | cut -d "[" -f2 | cut -d "]" -f1) 
+    [[ $req_idx -gt ${#gdm_conf_raw_lines[@]} ]] && echo "NO MORE" && return 1 # indicating no more requirements to be read
+    local requirement_params_raw=( ${(Q)${(Z+C+)${gdm_conf_raw_lines[$req_idx]}}} )
+    local repo_remote_url=""
+    local requirement_params=()
+    
+    for ((i = 1; i <= $#gdm_conf_param_names; i++)) ; do
+      local req_param="${requirement_params_raw[$i]}"
+
+      if [[ ${gdm_conf_param_names[$i]} == REPOSITORY ]] ; then
+        repo_remote_url=$(git_expand_remote_url ${req_param}) 
+        req_param="$repo_remote_url"
+
+      elif [[ ${gdm_conf_param_names[$i]} == BRANCH ]] ; then
+        if [[ -z  "$req_param" ]] ; then
+          req_param=$(git_remote_url_default_branch $repo_remote_url) && $debug && echo "BRANCH defaulted: $req_param"
+        else $debug && echo "BRANCH provided: $req_param"
+        fi
+      elif [[ ${gdm_conf_param_names[$i]} == REPO_DIRNAME ]] ; then
+        if [[ -z  "$req_param" ]] ; then
+          req_param=${repo_remote_url:t:r} && $debug && echo "REPO_DIRNAME defaulted: $req_param"
+        else $debug && echo "REPO_DIRNAME provided: $req_param"
+        fi
+      fi
+      [[ -z  "$req_param" ]] && req_param="#" # to prevent empty from collapsing order of parameters
+
+      requirement_params+=("\"${req_param}\"")
+    done
+    echo "$requirement_params"
+  else 
+    echo "error"
+  fi
+}
+
+
+git_expand_remote_url() {
+  # Errors: result in no output and $? return code being non-zero. Non-errors echo clonable remote_url and return 0
+  local remote_url="$1"
+
+  [[ "$remote_url" != *".git" ]] && remote_url="${remote_url}.git"
+
+  if ! git ls-remote --exit-code "$remote_url" >/dev/null 2>&1 ; then
+    local fwslashes=$(echo "$remote_url" | grep -o "/"  | wc -l | xargs)
+
+    if [[ $fwslashes == 1 ]] ; then   # github is assumed...
+      remote_url="https://github.com/$remote_url"
+    elif [[ $fwslashes == 2 ]] ; then # incomplete url but with domain...
+      remote_url="https://$remote_url"
+    else
+      return 1  # error: invalid or could not expand to valid url for a clonable git repository.
+    fi
+    if ! git ls-remote --exit-code "$remote_url" >/dev/null 2>&1 ; then
+      return 1 # error: invalid or could not expand to valid url for a clonable git repository.
+    fi
+  fi
+  echo "$remote_url"
+  return 0
+}
+
+git_remote_url_default_branch() {
+  # Errors: result in no output and $? return code being non-zero. Non-errors echo default branch and return 0
+  local def_br="$(git ls-remote --symref --quiet "$1" HEAD  >/dev/null 2>&1 | awk '/^ref:/ {sub(/refs\/heads\//, "", $2); print $2}')"
+  [[ -z $def_br ]] &&  return 1;
+  echo "$def_br" && return 0;
+}
+
 if [[ $ZSH_EVAL_CONTEXT == 'toplevel' ]]; then
   # We're not being sourced so run this script as a command
   gdm $@

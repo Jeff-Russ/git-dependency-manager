@@ -24,7 +24,7 @@ where links to the globally installed repositories are generated.
 * Disk space efficient:  inspired by [pnpm](https://www.npmjs.com/package/pnpm/v/3.7.0-3), project dependencies are hard links to a global store.
   * Automatic cleaning of unused dependencies kept in global store via reference counting of hard links.
 * Multiple versions of the same dependency can be switched between or used concurrently.
-* Nothing is installed on your system and no changes are made to your shell environment. Simply include the `gdm.zsh` in your project root and all collaborators can assemble the same dependency configuration by one call to this script.
+* Nothing is installed on your system and no changes are made to your shell environment. Simply include the `gdm` in your project root and all collaborators can assemble the same dependency configuration by one call to this script.
 
 
 # Installation
@@ -32,25 +32,25 @@ where links to the globally installed repositories are generated.
 
 ```sh
 cd YOUR/PROJECT/ROOT/
-curl https://raw.githubusercontent.com/Jeff-Russ/git-dependency-manager/main/gdm.zsh > ./gdm.zsh % chmod 755 ./gdm.zsh
+curl https://raw.githubusercontent.com/Jeff-Russ/git-dependency-manager/main/gdm > ./gdm % chmod 755 ./gdm
 ```
 
-That's it. I recommend to not .`gitignore` this `gdm.zsh` script as others who made clone 
+That's it. I recommend to not .`gitignore` this `gdm` script as others who made clone 
 your project will have it available to set up the same dependency environment you have.   
 
 If you find yourself doing this a lot, for different repositories, create a reusable command 
 that aliases the `curl` command (for zsh terminals):  
 
 ```zsh
-% echo "\\n"'alias dl-gdm="curl https://raw.githubusercontent.com/Jeff-Russ/git-dependency-manager/main/gdm.zsh > ./gdm.zsh % chmod 755 ./gdm.zsh"' >> ~/.zshrc 
+% echo "\\n"'alias dl-gdm="curl https://raw.githubusercontent.com/Jeff-Russ/git-dependency-manager/main/gdm > ./gdm % chmod 755 ./gdm"' >> ~/.zshrc 
 ```
 
-Then, from your project root, run `add-gdm` and the `gdm.zsh`  will be there for ya.
+Then, from your project root, run `add-gdm` and the `gdm`  will be there for ya.
 
 # Usage
 
 ```sh
-./gdm.zsh --help
+./gdm --help
 Usage: calling with
   --init    will generate empty configuration file for your project
   --conf    will read file and perform configuration.
@@ -64,7 +64,7 @@ export GDM_MODULES_DIRNAME="included_repos"
 When you execute with:  
 
 ```sh
-./gdm.zsh --init
+./gdm --init
 ```
 
 a file called `gdm_conf.zsh` will be placed in your current directory. This file 
@@ -73,11 +73,11 @@ is where you define you dependencies. It's packed with comments on how to to tha
 After you set up your  `gdm_conf.zsh`, run the following:  
 
 ```sh
-./gdm.zsh --conf
+./gdm --conf
 ```
 
 Afterward, everything will be set up for you! By default, you'll have a `gdm_modules/` 
 directory in your project root with your dependencies (you probably should `.gitignore` this)
 but you can choose a different name or bypass this entirely (see `gdm_conf.zsh` comments and
-output from `./gdm.zsh --help` for more information.).   
+output from `./gdm --help` for more information.).   
 
