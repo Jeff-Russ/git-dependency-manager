@@ -110,7 +110,6 @@ cat << 'CONF_DOC'
 # juce-framework/JUCE              develop  tag="7.0.0"     JUCE_v7
 # Jeff-Russ/git-dependency-manager 
 CONF_DOC
-}
 
 # example_prelink_hook(){
 #   # do things
@@ -148,10 +147,12 @@ gdm () {
   }'
 
   if eval ${not_valid_arg} "$1" ; then
-    printf "Usage: calling with\n  --init    will generate empty configuration file for your project\n  --conf    will read file and perform configuration.\n"
-    printf "By default, dependencies are installed (cloned to) ~/gdm_glob_store/ \nwith hard links to them in your <project-root>/gdm_modules\n"
-    printf "You can choose your own location by adding to your ~/.zshrc (for example):\n"
-    printf "export GDM_GLOB_STORE_PATH=\"/desired/path/to/directory/\"\n"
+    printf "Usage:\n  ./gdm init   # will generate empty configuration file for your project\n  ./gdm conf   # will read file and perform configuration.\n"
+    printf "\nBy default, dependencies are installed (cloned to) ~/gdm_glob_store/ \nwith hard links to them in each <project-root>/gdm_modules/\n"
+    printf "\nYou can choose your own global location for your machine by\nmodifying your rc file (for example, ~/.zshrc):\n"
+    printf "  export GDM_GLOB_STORE_PATH=\"/desired/path/to/directory/\"\n"
+    printf "You can choose your own location within a given probject by modifying the line:\n"
+    printf "  export GDM_MODULES_DIRNAME=\"gdm_modules\"\nin your project's gdm_conf.zsh file.\n"
     return 0
   fi
 
@@ -229,7 +230,7 @@ gdm () {
     # ! [[ -f "./gdm_conf.zsh" ]] && printf "Error: No \"gdm_conf.zsh\" file was found! \n" >&2 && return 1;
     # source ./gdm_conf.zsh
 
-    ! gdm_conf_params readfile "$gdm_conf_filename_default" && return 1;
+    ! _gdm_conf_params readfile "$gdm_conf_filename_default" && return 1;
 
     ! gdm-verify-paths "$CALLER_DIR" "--quiet-pass" && return 1;
 
@@ -239,20 +240,21 @@ gdm () {
     printf "\n"
 
     req_num=1
-    while req=$(gdm_conf_params "req[$req_num]" --quiet) ; do
+    while req=$(_gdm_conf_params "req[$req_num]" --quiet) ; do
 
-      local req_params=( ${(Q)${(Z+C+)req}} )
-      local remote_url=$req_params[1]
+      eval "req_params=( $req )"
+      local remote_url="${req_params[1]}"
       [[ $remote_url == "#" ]] && continue
       printf "------------------------------------------------------------\n"
       printf "      Requirement #${req_num} from ${gdm_conf_filename_default}:\n"
       (( req_num++ ))
 
-      local branch=$( [[ "${req_params[2]}" == "#" ]] && echo "" || echo "${req_params[2]}")
-      local commit=$( [[ "${req_params[3]}" == "#" ]] && echo "" || echo "${req_params[3]}")
-      local repo_dirname=$( [[ "${req_params[4]}" == "#" ]] && echo "" || echo "${req_params[4]}")
-      local pre_link_hook=$( [[ "${req_params[5]}" == "#" ]] && echo "" || echo "${req_params[5]}")
-      local linker_bypass_hook=$( [[ "${req_params[6]}" == "#" ]] && echo "" || echo "${req_params[6]}")
+      local branch="${req_params[2]}"
+      local commit="${req_params[3]}"
+      local repo_dirname="${req_params[4]}"
+      local pre_link_hook="${req_params[5]}"
+      local linker_bypass_hook="${req_params[6]}"
+
       
       local req_details="$remote_url branch=$branch dir=$repo_dirname"
       ! [[ -z $pre_link_hook ]] && req_details="$req_details pre_link_hook=$pre_link_hook"
@@ -569,7 +571,7 @@ local gdm_conf_filename_default="./gdm_conf.zsh"
 local gdm_conf_filename=""
 
 
-gdm_conf_params () {
+_gdm_conf_params () {
   local quiet=false
   (($@[(Ie)--quiet])) && quiet=true
 
@@ -602,7 +604,7 @@ gdm_conf_params () {
 
   elif [[ $1 =~ '^(req|requirement)\[[1-9][0-9]*\]$' ]]  ; then
     if [[ $gdm_conf_file_code -ne 0 ]] ; then
-      [[ $gdm_conf_file_code -eq 99 ]] && $quiet && gdm_conf_params readfile --quiet || gdm_conf_params readfile
+      [[ $gdm_conf_file_code -eq 99 ]] && $quiet && _gdm_conf_params readfile --quiet || _gdm_conf_params readfile
     fi
     local req_idx=$(echo $1 | cut -d "[" -f2 | cut -d "]" -f1) 
     [[ $req_idx -gt ${#gdm_conf_raw_lines[@]} ]] && echo "NO MORE" && return 1 # indicating no more requirements to be read
@@ -628,8 +630,6 @@ gdm_conf_params () {
         else $debug && echo "REPO_DIRNAME provided: $req_param"
         fi
       fi
-      [[ -z  "$req_param" ]] && req_param="#" # to prevent empty from collapsing order of parameters
-
       requirement_params+=("\"${req_param}\"")
     done
     echo "$requirement_params"

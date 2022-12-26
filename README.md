@@ -50,21 +50,26 @@ Then, from your project root, run `add-gdm` and the `gdm`  will be there for ya.
 # Usage
 
 ```sh
-./gdm --help
-Usage: calling with
-  --init    will generate empty configuration file for your project
-  --conf    will read file and perform configuration.
+./gdm help
+Usage:
+  ./gdm init   # will generate empty configuration file for your project
+  ./gdm conf   # will read file and perform configuration.
+
 By default, dependencies are installed (cloned to) ~/gdm_glob_store/ 
-with hard links to them in your <project-root>/GDM_MODULES
-You can choose your own locations by adding to your ~/.zshrc (for example):
-export GDM_GLOB_STORE_PATH="/desired/path/to/directory/"
-export GDM_MODULES_DIRNAME="included_repos"
+with hard links to them in each <project-root>/gdm_modules/
+
+You can choose your own global location for your machine by
+modifying your rc file (for example, ~/.zshrc):
+  export GDM_GLOB_STORE_PATH="/desired/path/to/directory/"
+You can choose your own location within a given probject by modifying the line:
+  export GDM_MODULES_DIRNAME="gdm_modules"
+in your project's gdm_conf.zsh file.
 ```
 
 When you execute with:  
 
 ```sh
-./gdm --init
+./gdm init
 ```
 
 a file called `gdm_conf.zsh` will be placed in your current directory. This file 
@@ -73,11 +78,11 @@ is where you define you dependencies. It's packed with comments on how to to tha
 After you set up your  `gdm_conf.zsh`, run the following:  
 
 ```sh
-./gdm --conf
+./gdm conf
 ```
 
 Afterward, everything will be set up for you! By default, you'll have a `gdm_modules/` 
 directory in your project root with your dependencies (you probably should `.gitignore` this)
 but you can choose a different name or bypass this entirely (see `gdm_conf.zsh` comments and
-output from `./gdm --help` for more information.).   
+output from `./gdm help` for more information.).   
 
