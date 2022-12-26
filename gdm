@@ -170,7 +170,7 @@ gdm () {
     if ! [ -d "$GDM_GLOB_STORE_PATH" ] ; then # make the directory
       ! (($@[(Ie)--quiet-pass])) && printf "mkdir ${GDM_GLOB_STORE_PATH}\n"
       if ! mkdir "$GDM_GLOB_STORE_PATH" ; then 
-        printf "ERROR: mkdir ${GDM_GLOB_STORE_PATH} failed.\n"  >&2 
+        printf "$(_S R S)ERROR: $(_S E)mkdir ${GDM_GLOB_STORE_PATH} failed.\n$(_S)" >&2 
         unset GDM_GLOB_STORE_PATH
         return 1
       fi
@@ -203,9 +203,10 @@ gdm () {
     if ! [[ -z  "$project_path" ]] && ! [ -d "${project_path}/${GDM_MODULES_DIRNAME}" ]; then 
       printf "mkdir ${project_path}/${GDM_MODULES_DIRNAME}\n"
       if ! mkdir "${project_path}/${GDM_MODULES_DIRNAME}" ; then
-        printf "ERROR: mkdir ${project_path}/${GDM_MODULES_DIRNAME} failed.\n"  >&2 
+        printf "$(_S R S)ERROR: $(_S E)mkdir ${project_path}/${GDM_MODULES_DIRNAME} failed.\n$(_S)" >&2 
         return 1;
       fi
+      echo "/*" > "${project_path}/${GDM_MODULES_DIRNAME}/.gitignore" # gitignore GDM_MODULES_DIRNAME/*
     fi
     return 0
   }
@@ -227,7 +228,7 @@ gdm () {
   # (usually for a given project unless they bypass the gdm_linker)
   elif [[ "$1" =~ ${ARGS[configure]} ]] ;then 
     
-    # ! [[ -f "./gdm_conf.zsh" ]] && printf "Error: No \"gdm_conf.zsh\" file was found! \n" >&2 && return 1;
+    # ! [[ -f "./gdm_conf.zsh" ]] && printf "$(_S R S)ERROR: $(_S E)No \"gdm_conf.zsh\" file was found! \n$(_S)" >&2 && return 1;
     # source ./gdm_conf.zsh
 
     ! _gdm_conf_params readfile "$gdm_conf_filename_default" && return 1;
@@ -256,9 +257,9 @@ gdm () {
       local linker_bypass_hook="${req_params[6]}"
 
       
-      local req_details="$remote_url branch=$branch dir=$repo_dirname"
-      ! [[ -z $pre_link_hook ]] && req_details="$req_details pre_link_hook=$pre_link_hook"
-      ! [[ -z $linker_bypass_hook ]] && req_details="$req_details linker_bypass_hook=$linker_bypass_hook"
+      local req_details="$(_S B)${req_params[1]}$(_S) branch=$(_S B)$branch$(_S) dir=$(_S B)$repo_dirname$(_S)"
+      ! [[ -z $pre_link_hook ]] && req_details="$req_details pre_link_hook=$(_S B)$pre_link_hook$(_S)"
+      ! [[ -z $linker_bypass_hook ]] && req_details="$req_details linker_bypass_hook=$(_S B)$linker_bypass_hook$(_S)"
       printf "$req_details \n"
       
       
@@ -272,8 +273,8 @@ gdm () {
 
         printf "Cloning ${remote_url} to \$GDM_GLOB_STORE_PATH/${repo_dirname}\n"
         if [[ -z "$remote_url" ]] || ! git clone "$remote_url" "$repo_dirname" --quiet ; then
-          errors+=("  Skipped: ${dep_params}\n   Reason: Cannot clone \"$remote_url\"\n")
-          printf "ERROR: Cannot clone \"$remote_url\"\n" >&2 && continue
+          errors+=("  $(_S R)Skipped:$(_S E)${req_params}\n   Reason: Cannot clone \"$remote_url\"\n$(_S)")
+          printf "$(_S R S)ERROR: $(_S E)Cannot clone \"$remote_url\"\n$(_S)" >&2 && continue
         fi
       else
         echo "${repo_dirname} was previously installed in \$GDM_GLOB_STORE_PATH"
@@ -291,21 +292,21 @@ gdm () {
 
           printf "git pull ${origin_name} ${branch}\n"
           if ! git pull "$origin_name" "$branch" -q ; then
-            errors+=("  Skipped: ${dep_params}\n   Reason: Execution of the following failed: git pull ${origin_name} ${branch}\n")
-            printf "ERROR: Execution of the following failed: git pull ${origin_name} ${branch}\n" >&2 && continue
+            errors+=("  $(_S R)Skipped:$(_S E)${req_params}\n   Reason: Execution of the following failed: git pull ${origin_name} ${branch}\n$(_S)")
+            printf "$(_S R S)ERROR: $(_S E)Execution of the following failed: git pull ${origin_name} ${branch}\n$(_S)" >&2 && continue
           fi
         fi
         printf "git checkout ${branch}\n"
         if ! git checkout "$branch" ; then
-          errors+=("  Skipped: ${dep_params}\n   Reason: Execution of the following failed: git checkout ${branch}\n")
-          printf "ERROR: Execution of the following failed: git checkout ${branch}\n" >&2 && continue
+          errors+=("  $(_S R)Skipped:$(_S E)${req_params}\n   Reason: Execution of the following failed: git checkout ${branch}\n$(_S)")
+          printf "$(_S R S)ERROR: $(_S E)Execution of the following failed: git checkout ${branch}\n$(_S)" >&2 && continue
         fi
       else 
         printf "git pull ${origin_name} ${branch}\n"
         if ! git pull "$origin_name" "$branch" -q ; then
           # We still pull even though the branch was found locally. But we can recover if this fails by using local branch.
-          errors+=("  Warning: \`git pull ${origin_name} ${branch}\` failed but local branch was found and will be used.\n")
-          printf "WARNING: \`git pull ${origin_name} ${branch}\` failed but local branch was found and will be used.\n"
+          errors+=("  $(_S Y S)Warning: $(_S E)\`git pull ${origin_name} ${branch}\` failed but local branch was found and will be used.\n$(_S)")
+          printf "$(_S Y S)WARNING: $(_S E)\`git pull ${origin_name} ${branch}\` failed but local branch was found and will be used.\n$(_S)"
         fi 
       fi
 
@@ -350,8 +351,8 @@ gdm () {
               ! [[ -z "$commit_target" ]] && shorthash=$(echo $commit_target | cut -d " " -f1)
             fi
             if [[ -z "$shorthash" ]] ; then
-              errors+=("  Skipped: ${dep_params}\n   Reason: Commit log search string \"${dep_params[3]}\" not found in git log\n")
-              printf "ERROR: Commit log search string \"${dep_params[3]}\" not found in git log! \n" >&2 && continue
+              errors+=("  $(_S R)Skipped:$(_S E)${req_params}\n   Reason: Commit log search string \"${req_params[3]}\" not found in git log\n$(_S)")
+              printf "$(_S R S)ERROR: $(_S E)Commit log search string \"${req_params[3]}\" not found in git log! \n$(_S)" >&2 && continue
             fi
           fi
           printf "Requested: ${commit_target}\n"
@@ -373,7 +374,7 @@ gdm () {
 
         if ! [ -d "${project_path}/${GDM_MODULES_DIRNAME}" ] ; then
           if ! mkdir "${project_path}/${GDM_MODULES_DIRNAME}" ; then 
-            printf "ERROR gdm_linker could not create ${project_path}/${GDM_MODULES_DIRNAME}! \n" >&2 
+            printf "$(_S R S)ERROR: $(_S E)dm_linker could not create ${project_path}/${GDM_MODULES_DIRNAME}! \n$(_S)" >&2 
             return 1
           fi
         elif [ -d "${project_path}/${GDM_MODULES_DIRNAME}/${repo_dirname}" ] ; then
@@ -384,7 +385,7 @@ gdm () {
         # cp -lR $src $dest # https://superuser.com/a/1523307
         local result
         if ! result=$(cp -al "${GDM_GLOB_STORE_PATH}/${repo_dirname}" "${project_path}/${GDM_MODULES_DIRNAME}/${repo_dirname}" 2>&1); then
-          printf "ERROR (gdm_linker): ${result}\n" >&2
+          printf "$(_S R S)ERROR: $(_S E)gdm_linker): ${result}\n$(_S)" >&2
           return 1
         fi
         # Register that the requirement as has been added to GDM_MODULES_DIRNAME so we can clean up (rm un-required) afterward:
@@ -394,8 +395,8 @@ gdm () {
       if ! [[ -z "$pre_link_hook" ]] ; then 
         printf "Executing pre_link_hook (${pre_link_hook}) \n"
         if ! eval ${pre_link_hook} "$GDM_GLOB_STORE_PATH" "$repo_dirname" "$CALLER_DIR" "$GDM_MODULES_DIRNAME" ; then
-          errors+=("  Incomplete: ${dep_params}\n   Reason: Execution of provided hook, ${pre_link_hook}, FAILED! Skipping any remaining. \n")
-          printf "Execution of provided hook, ${pre_link_hook}, FAILED! Skipping any remaining. \n"  >&2 && continue
+          errors+=("  $(_S R S)ERROR:$(_S E) ${req_params}\n   Reason: Execution of provided hook, ${pre_link_hook}, FAILED! Skipping any remaining. \n$(_S)")
+          printf "$(_S R S)ERROR: $(_S E)Execution of provided hook, ${pre_link_hook}, FAILED! Skipping any remaining. $(_S)\n"  >&2 && continue
         fi
       fi
 
@@ -404,24 +405,24 @@ gdm () {
         printf "      source: ${GDM_GLOB_STORE_PATH}/${repo_dirname}\n"
         printf " destination: ${CALLER_DIR}/${GDM_MODULES_DIRNAME}/${repo_dirname}\n"
         if ! gdm_linker "$GDM_GLOB_STORE_PATH" "$repo_dirname" "$CALLER_DIR" "$GDM_MODULES_DIRNAME" ; then
-          errors+=("  Incomplete: ${dep_params}\n   Reason: gdm_linker failed! \n")
-          printf "gdm_linker FAILED! \n"  >&2 && continue
+          errors+=("  $(_S R S)ERROR:$(_S E) ${req_params}\n   Reason: gdm_linker failed! $(_S)\n")
+          printf "$(_S R S)ERROR: $(_S E)gdm_linker FAILED! \n$(_S)"  >&2 && continue
         fi
       else
         printf "Executing linker_bypass_hook (${linker_bypass_hook}) \n"
         if ! eval ${linker_bypass_hook} "$GDM_GLOB_STORE_PATH" "$repo_dirname" "$CALLER_DIR" "$GDM_MODULES_DIRNAME" ; then
-          errors+=("  Incomplete: ${dep_params}\n   Reason: Execution of link-bypassing hook, ${linker_bypass_hook}, FAILED! \n")
-          printf "Execution of link-bypassing hook, ${linker_bypass_hook}, FAILED! \n"  >&2 && continue
+          errors+=("  $(_S R S)ERROR:$(_S E) ${req_params}\n   Reason: Execution of link-bypassing hook, ${linker_bypass_hook}, FAILED! \n$(_S)")
+          printf "$(_S E)ERROR:$(_S E)  Execution of link-bypassing hook, ${linker_bypass_hook}, FAILED! \n$(_S)"  >&2 && continue
         fi
       fi
       cd "$CALLER_DIR"
     done
 
-    printf "____________________________________________________________\n"
+    printf "------------------------------------------------------------\n"
     
     cd "$CALLER_DIR" # just in case last loop cut out (continue) early
 
-    printf "--- Creating link-tracker(s) -------------------------------\n"   
+    printf "----  Creating link-tracker(s)  ----\n"   
     for _module in $LINKED_MODULES ; do
       local linked_repo_dirname=${_module:t:r}
       printf "$repo_dirname "
@@ -437,11 +438,8 @@ gdm () {
         ln "$src_tracker" "$req_tracker"
       fi
     done
-    printf "\n"
 
- 
-    printf "--- Cleaning out unused dependencies -----------------------\n"  
-    printf "Searching ./${GDM_MODULES_DIRNAME}...\n"
+    printf "\n----  Cleaning out unused dependencies  ----\nSearching ./${GDM_MODULES_DIRNAME}...\n"
     local req_modules_cnt=${#LINKED_MODULES[@]}
     local found_modules=("${(@f)$(gdm --list-modules)}")
     local found_modules_cnt=${#found_modules[@]}
@@ -456,13 +454,13 @@ gdm () {
 
           # Remove only if ${unreq_loc_repo_dirname}-link-tracker is found 
           if ! [ -f "${_module}-link-tracker" ] ; then
-            errors+=("  Warning: untracked module \"${_module}\" was found but not removed.\n")
-            printf " Warning: untracked module \"${_module}\" was found but not removed.\n"  >&2 && continue
+            errors+=("  $(_S Y S)Warning: $(_S E)untracked module \"${_module}\" was found but not removed.\n$(_S)")
+            printf " $(_S Y S)Warning: $(_S E)untracked module \"${_module}\" was found but not removed.\n$(_S)"  >&2 && continue
           fi
           # Remove only if ${unreq_loc_repo_dirname} is found in global store
           if ! [ -d  "${GDM_GLOB_STORE_PATH}/${unreq_loc_repo_dirname}" ] ; then
-            errors+=("  Warning: unknown module \"${_module}\" was found but not removed.\n")
-            printf " Warning: unknown module \"${_module}\" was found but not removed.\n"  >&2 && continue
+            errors+=("  $(_S Y S)Warning: $(_S E)unknown module \"${_module}\" was found but not removed.\n$(_S)")
+            printf " $(_S Y S)Warning: $(_S E)unknown module \"${_module}\" was found but not removed.\n$(_S)"  >&2 && continue
           fi
 
           printf "  rm -rf ${_module}"
@@ -482,13 +480,12 @@ gdm () {
     fi
     gdm --clean-store
     
-    printf "____________________________________________________________\n"
     printf "---- Result Report -----------------------------------------\n"
     if [ ${#errors[@]} -ne 0 ] ; then
-      printf "Completed, with the following errors/warnings:\n"
+      printf "Completed, with the following $(_S R)errors$(_S)/$(_S Y)warnings:\n$(_S)"
       printf $errors >&2
     else
-      printf "Completed without errors! \n"
+      printf "$(_S G S)Completed without errors! \n$(_S)"
     fi
 
 
@@ -538,9 +535,9 @@ gdm () {
 
 
         if [[ "$store_path_tracked" != "$_stored_repo_path" ]] ; then
-          printf "Warning: \`cat \${GDM_GLOB_STORE_PATH}/${_stored_repo_name}-link-tracker\` shows it's tracking ${store_path_tracked}.\n"
+          printf "$(_S Y S)WARNING: $(_S E)\`cat \${GDM_GLOB_STORE_PATH}/${_stored_repo_name}-link-tracker\` shows it's tracking ${store_path_tracked}.\n$(_S)"
         elif [[ $tracker_inode -ne $inode_num ]] ; then
-          printf "Warning: \`cat \${GDM_GLOB_STORE_PATH}/${_stored_repo_name}-link-tracker\` shows an inode that is not it's own!\n"
+          printf "$(_S Y S)WARNING: $(_S E)\`cat \${GDM_GLOB_STORE_PATH}/${_stored_repo_name}-link-tracker\` shows an inode that is not it's own! \n$(_S)"
           
         elif [[ $tracker_refcount -eq 1 ]] ; then # REMOVE 
           printf "Removing used: \${GDM_GLOB_STORE_PATH}/${_stored_repo_name}\n"
@@ -582,20 +579,30 @@ _gdm_conf_params () {
     gdm_conf_raw_lines=()
     if [[ -z "$gdm_conf_filename" ]]; then
       local gdm_conf_filename="$2"
-      [[ -z "$gdm_conf_filename" ]] ||  [[ "$gdm_conf_filename" == "--quiet" ]] && gdm_conf_filename="$gdm_conf_filename_default"
+      [[ -z "$gdm_conf_filename" ]] ||  [[ "$gdm_conf_filename" == "--quiet" ]] && 
+        gdm_conf_filename="$gdm_conf_filename_default"
     fi
     local file="$gdm_conf_filename"
     
-    ! [[ -f "$file" ]] && gdm_conf_file_code=1  && ! $quiet && printf "Error: \"$file\" file not found! \n" >&2 && return $gdm_conf_file_code ;
+    ! [[ -f "$file" ]] && 
+      gdm_conf_file_code=1 && 
+      ! $quiet && printf "$(_S R S)ERROR: $(_S E)\"$file\" file not found! \n$(_S)" >&2 && 
+      return $gdm_conf_file_code ;
 
     local conf_doc=$(source ./gdm_conf.zsh)
-    [[ -z "$conf_doc" ]] && gdm_conf_file_code=2 && ! $quiet && printf "Error: \"$file\" has no output! \n" >&2 && return $gdm_conf_file_code ;
+    [[ -z "$conf_doc" ]] && 
+      gdm_conf_file_code=2 && 
+      ! $quiet && printf "$(_S R S)ERROR: $(_S E)\"$file\" has no output! \n$(_S)" >&2 && 
+      return $gdm_conf_file_code ;
     local gdm_conf_lines_temp=("${(f)$(echo $conf_doc)}")
 
     for line in $gdm_conf_lines_temp ; do
       ! [[ "$line" =~ '^ *#' ]] && gdm_conf_raw_lines+=($line)
     done
-    [[ ${#gdm_conf_raw_lines[@]} -eq 0 ]]  && gdm_conf_file_code=3 && ! $quiet && printf "Warning: \"$file\" has no requirements! \n" >&2 && return $gdm_conf_file_code ;
+    [[ ${#gdm_conf_raw_lines[@]} -eq 0 ]] && 
+      gdm_conf_file_code=3 && 
+      ! $quiet && printf "$(_S Y S)WARNING: $(_S E)\"$file\" has no requirements! \n$(_S)" >&2 && 
+      return $gdm_conf_file_code ;
 
     ! $quiet && printf "Found ${#gdm_conf_raw_lines[@]} requirements in  \"$file\"\n"
     gdm_conf_file_code=0
@@ -604,7 +611,8 @@ _gdm_conf_params () {
 
   elif [[ $1 =~ '^(req|requirement)\[[1-9][0-9]*\]$' ]]  ; then
     if [[ $gdm_conf_file_code -ne 0 ]] ; then
-      [[ $gdm_conf_file_code -eq 99 ]] && $quiet && _gdm_conf_params readfile --quiet || _gdm_conf_params readfile
+      [[ $gdm_conf_file_code -eq 99 ]] && 
+        $quiet && _gdm_conf_params readfile --quiet || _gdm_conf_params readfile
     fi
     local req_idx=$(echo $1 | cut -d "[" -f2 | cut -d "]" -f1) 
     [[ $req_idx -gt ${#gdm_conf_raw_lines[@]} ]] && echo "NO MORE" && return 1 # indicating no more requirements to be read
@@ -621,7 +629,8 @@ _gdm_conf_params () {
 
       elif [[ ${gdm_conf_param_names[$i]} == BRANCH ]] ; then
         if [[ -z  "$req_param" ]] ; then
-          req_param=$(git_remote_url_default_branch $repo_remote_url) && $debug && echo "BRANCH defaulted: $req_param"
+          req_param=$(git_remote_url_default_branch $repo_remote_url) && 
+            $debug && echo "BRANCH defaulted: $req_param"
         else $debug && echo "BRANCH provided: $req_param"
         fi
       elif [[ ${gdm_conf_param_names[$i]} == REPO_DIRNAME ]] ; then
@@ -669,6 +678,34 @@ git_remote_url_default_branch() {
   [[ -z $def_br ]] &&  return 1;
   echo "$def_br" && return 0;
 }
+
+function _S() { # S for STYLE
+  # USAGE: 
+  #  echo -e "$(_S R E)red italics$(_S)"
+  #  echo -e "$(_S R E)ERROR: $(_S E)just italics\!$(_S)"
+  declare -A cLU # code lookup
+  cLU[S]=1 # Strong (bold)
+  cLU[D]=2 # Dim
+  cLU[E]=3 # Emphasis (italic)
+  cLU[U]=4 # Underline
+  cLU[F]=5 # Flash (blink)
+  cLU[6]=6 # ?
+  cLU[I]=7 # Invert FG/BG colors
+  cLU[R]=31 # Red
+  cLU[G]=32 # Green
+  cLU[Y]=33 # Yellow
+  cLU[B]=34 # Blue
+  cLU[M]=35 # Magenta
+  cLU[C]=36 # Cyan
+  
+  local seq="\e[0m"
+  [ $# -eq 0 ] && print "$seq" && return 0;
+  seq="${seq}\e["
+
+  for var in "$@" ; do seq="${seq}${cLU[$var]};" ; done
+  print "${seq[1,-2]}m" # remove last ; and append m
+}
+
 
 if [[ $ZSH_EVAL_CONTEXT == 'toplevel' ]]; then
   # We're not being sourced so run this script as a command
