@@ -26,6 +26,18 @@ where links to the globally installed repositories are generated.
 * Multiple versions of the same dependency can be switched between or used concurrently.
 * Nothing is installed on your system and no changes are made to your shell environment. Simply include the `gdm` in your project root and all collaborators can assemble the same dependency configuration by one call to this script.
 
+# News
+
+The current version is `v1.0beta1` for which one caveat should be known: 
+
+With this  version, it is recommended that each time resuming work on a project 
+`./gdm conf`  should be re-run. Normally this won't be need but in cases where two 
+projects may be  working off the same dependency in the global store, the files 
+within it make have deviate into different inodes. Generally this would mean more 
+drive space that needed would be used but in some cases, it could be your local 
+version of the dependency could be corrupted.
+
+Just run `./gdm conf` to be sure for now. This will be remedied soon!
 
 # Installation
 

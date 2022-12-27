@@ -34,13 +34,15 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 
 
+GDM_VERSION="v1.0beta1"
 REMOVE_UNTRACKED_GLOBS=false
 
 
-gdm_conf-template() {
+gdm_conf_template() {
 cat << 'CONFDOC'
 #!/usr/bin/env zsh
 export GDM_MODULES_DIRNAME="gdm_modules" 
+gdm_conf_ver() { echo "v1.0beta1" } # DO NOT REMOVE
 
 # Each non-commented row in CONF_DOC is parameterized (by same delimiting rules 
 #   as arguments to shell command: the delimiter is any non-quoted space(s)) 
@@ -121,11 +123,8 @@ CONF_DOC
 #   # do things
 #   # return 0 for success or nonzero to fail
 # } 
-
 CONFDOC
 }
-
-
 
 gdm () {
   local CALLER_DIR=$(pwd)
@@ -168,12 +167,14 @@ gdm () {
     fi
 
     if ! [ -d "$GDM_GLOB_STORE_PATH" ] ; then # make the directory
-      ! (($@[(Ie)--quiet-pass])) && printf "mkdir ${GDM_GLOB_STORE_PATH}\n"
+      printf "  $(_S B)mkdir ${GDM_GLOB_STORE_PATH}\n$(_S)"
       if ! mkdir "$GDM_GLOB_STORE_PATH" ; then 
         printf "$(_S R S)ERROR: $(_S E)mkdir ${GDM_GLOB_STORE_PATH} failed.\n$(_S)" >&2 
         unset GDM_GLOB_STORE_PATH
         return 1
       fi
+      printf "$(_S B)  echo \"$GDM_VERSION\" > \$GDM_GLOB_STORE_PATH/GDM_MANIFEST\n$(_S)"
+      echo "$GDM_VERSION" > "${GDM_GLOB_STORE_PATH}/GDM_MANIFEST"
     fi
 
     if $glob_path_was_unset ; then # write to rc file should be after we know if making it failed
@@ -187,24 +188,27 @@ gdm () {
       local rcfile="${HOME}/.${CALLER_SHELL}rc"
       if ! grep -sq '^[^#]*export GDM_GLOB_STORE_PATH=[^#][^#][^#]' "$rcfile" ; then
         ! [ -f "$rcfile" ] && touch "$rcfile"
-        printf "$CALLER_SHELL shell detected. Appending to ${rcfile}:\n"
-        printf "export GDM_GLOB_STORE_PATH=\"\$HOME/gdm_glob_store\"\n"
+        printf "$(_S D)$CALLER_SHELL shell detected. Appending to ${rcfile}:\n"
+        printf "  $(_S M)export GDM_GLOB_STORE_PATH=\"\$HOME/gdm_glob_store\"\n$(_S)"
         echo "\\nexport GDM_GLOB_STORE_PATH=\"\$HOME/gdm_glob_store\"" >> "$rcfile"
       fi
     else
-      ! (($@[(Ie)--quiet-pass])) && printf "GDM_GLOB_STORE_PATH=${GDM_GLOB_STORE_PATH}\n"
+      printf "GDM_GLOB_STORE_PATH=${GDM_GLOB_STORE_PATH}\n"
     fi
 
     if ! (( ${+GDM_MODULES_DIRNAME} )) ; then # when unset? when gdm_config was not read or did not export it.
-      ! (($@[(Ie)--quiet-pass])) && printf "setting GDM_MODULES_DIRNAME \n"
+      ! (($@[(Ie)--quiet-pass])) && printf "  $(_S D)setting GDM_MODULES_DIRNAME \n$(_S)"
       export GDM_MODULES_DIRNAME="gdm_modules"
     fi
     if ! [[ -z  "$project_path" ]] && ! [ -d "${project_path}/${GDM_MODULES_DIRNAME}" ]; then 
-      printf "mkdir ${project_path}/${GDM_MODULES_DIRNAME}\n"
+      printf "  $(_S B)mkdir ./${GDM_MODULES_DIRNAME}\n$(_S)"
       if ! mkdir "${project_path}/${GDM_MODULES_DIRNAME}" ; then
-        printf "$(_S R S)ERROR: $(_S E)mkdir ${project_path}/${GDM_MODULES_DIRNAME} failed.\n$(_S)" >&2 
+        printf "$(_S R S)ERROR: $(_S E)mkdir ./${GDM_MODULES_DIRNAME} failed.\n$(_S)" >&2 
         return 1;
       fi
+      printf "$(_S B)  echo \"$GDM_VERSION\" > ./${GDM_MODULES_DIRNAME}/GDM_MANIFEST\n$(_S)"
+      echo "$GDM_VERSION" > "${project_path}/${GDM_MODULES_DIRNAME}/GDM_MANIFEST"
+      printf "  $(_S B)echo \"/*\" > \"./${GDM_MODULES_DIRNAME}/.gitignore$(_S)"
       echo "/*" > "${project_path}/${GDM_MODULES_DIRNAME}/.gitignore" # gitignore GDM_MODULES_DIRNAME/*
     fi
     return 0
@@ -217,7 +221,7 @@ gdm () {
     [[ -f "$gdm_conf_file" ]] && grep -q '[^[:space:]]' "$gdm_conf_file" && 
       printf "./gdm_conf.zsh already exists and is not empty!\nTo run file's configuration:\n  gdm --conf\n" >&2 && 
       return 1;
-    gdm_conf-template > "${CALLER_DIR}/gdm_conf.zsh"
+    gdm_conf_template > "${CALLER_DIR}/gdm_conf.zsh"
     printf "${CALLER_DIR}/gdm_conf.zsh configuration file generated.\n"
     return 0
 
@@ -269,11 +273,13 @@ gdm () {
         # validate that $remote_url can be cloned and clone
         remote_url=$(git_expand_remote_url "$remote_url")
 
-        printf "  $(_S B)git clone ${remote_url} \"\$GDM_GLOB_STORE_PATH/${repo_dirname}\"\n$(_S)"
+        printf "  $(_S B)git clone ${remote_url} \"\$GDM_GLOB_STORE_PATH/${repo_dirname}\"\n$(_S D)"
+        printf "  Please wait. This may take a while...."
         if [[ -z "$remote_url" ]] || ! git clone "$remote_url" "$repo_dirname" --quiet ; then
           errors+=("  $(_S R)Skipped:$(_S E)${req_params}\n   Reason: Cannot clone \"$remote_url\"\n$(_S)")
-          printf "$(_S R S)ERROR: $(_S E)Cannot clone \"$remote_url\"\n$(_S)" >&2 && continue
+          printf "\n$(_S R S)ERROR: $(_S E)Cannot clone \"$remote_url\"\n$(_S)" >&2 && continue
         fi
+        printf "$(_S)\n"
       else
         printf "  $(_S D)Previous installation found in \$GDM_GLOB_STORE_PATH/${repo_dirname}\n$(_S)"
       fi
@@ -368,20 +374,20 @@ gdm () {
         local GDM_MODULES_DIRNAME="$4"
 
         if ! [ -d "${project_path}/${GDM_MODULES_DIRNAME}" ] ; then
-          printf "  $(_S B)mkdir \${project_path}/${GDM_MODULES_DIRNAME}\n$(_S)" 
+          printf "  $(_S B)mkdir ./${GDM_MODULES_DIRNAME}\n$(_S)" 
           if ! mkdir "${project_path}/${GDM_MODULES_DIRNAME}" ; then 
-            printf "$(_S R S)ERROR: $(_S E)dm_linker could not create ${project_path}/${GDM_MODULES_DIRNAME}! \n$(_S)" >&2 
+            printf "$(_S R S)ERROR: $(_S E)dm_linker could not create ./${GDM_MODULES_DIRNAME}! \n$(_S)" >&2 
             return 1
           fi
         elif [ -d "${project_path}/${GDM_MODULES_DIRNAME}/${repo_dirname}" ] ; then
-          printf "  $(_S B)rm -rf \${project_path}/${GDM_MODULES_DIRNAME}/${repo_dirname}$(_S)\n"
+          printf "  $(_S B)rm -rf ./${GDM_MODULES_DIRNAME}/${repo_dirname}$(_S)\n"
           rm -rf "${project_path}/${GDM_MODULES_DIRNAME}/${repo_dirname}"
         fi
         # Options for making hard link:
         # cp -al $src $dest # https://unix.stackexchange.com/a/202431
         # cp -lR $src $dest # https://superuser.com/a/1523307
         local result
-        printf "  $(_S B)cp -al \"\$GDM_GLOB_STORE_PATH/${repo_dirname}\" \"\$project_path/${GDM_MODULES_DIRNAME}/${repo_dirname}\n$(_S)"
+        printf "  $(_S B)cp -al \"\$GDM_GLOB_STORE_PATH/${repo_dirname}\" \"./${GDM_MODULES_DIRNAME}/${repo_dirname}\n$(_S)"
         if ! result=$(cp -al "${GDM_GLOB_STORE_PATH}/${repo_dirname}" "${project_path}/${GDM_MODULES_DIRNAME}/${repo_dirname}" 2>&1); then
           printf "$(_S R S)ERROR: $(_S E)gdm_linker): ${result}\n$(_S)" >&2
           return 1
