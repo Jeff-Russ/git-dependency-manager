@@ -333,7 +333,7 @@ gdm () {
           # Get tag substring and remove leanding/trailing spaces;
           local tag=$(echo "${commit[$first_idx,$last_idx]}" | xargs)
           commit_backup="$commit"
-          commit="(tag: $tag" # reform to format seen in git log output (leaving off ')' is intentional!)
+          commit="tag: $tag" # reform to format seen in git log output (leaving off '(' and ')' is intentional!)
           echo "$(_S D)Searching for tag \"$tag\" in \n  $(_S B)git_log=\$(git --no-pager log --no-walk --tags --oneline --pretty='%h%d %as (%an) %s')$(_S)"
           git_log=$(git --no-pager log --no-walk --tags --oneline --pretty='%h%d %as (%an) %s') # only tagged
         else
