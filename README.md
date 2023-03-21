@@ -2,29 +2,18 @@
 
 ##### A small zsh script for managing dependencies that are git repositories.
 
-After working on projects making use of git repositories as libraries/frameworks 
-for which no proper package manager exist, managing these dependencies felt a bit 
-error-prone. I would often have to take note of what git commit hash my code 
-depended on and move the git HEAD pointer to that commit... then moving it forward 
-for newer projects. This doesn't work very well when collaborating as there is no 
-mechanism for doing this automatically (selecting version numbers per-project) and 
-no consistent path to reference the dependencies across different machines.  
+Git Dependency Manager (`gdm`) is a "no publish" package manager alternative that is language and platform agnostic. 
 
-So I made little zsh script to do this for me. It's not ideal but it does the job. 
-It depends on too many implementation details of git and commit message practices 
-such as tagging releases but it works, for now. 
-
-So if the problem this script tackles is a problem for you as well, give it a shot. 
-It won't touch any part of your system beside a single global directory you choose 
-to keep all dependencies and, optionally, a directory within each of your projects 
-where links to the globally installed repositories are generated.  
+It was created to address the issue working on projects that make use of git repositories as libraries/frameworks for that have not been published to any package manager. For a particular "package" to be available via `gdm`, the only criteria is that it be hosted as git repository. `gdm` ensures each collaborator is working with the same version of requirement with consistent paths to reference them across different machines. 
 
 # Features
 
-* Disk space efficient:  inspired by [pnpm](https://www.npmjs.com/package/pnpm/v/3.7.0-3), project dependencies are hard links to a global store.
-  * Automatic cleaning of unused dependencies kept in global store via reference counting of hard links.
-* Multiple versions of the same dependency can be switched between or used concurrently.
-* Nothing is installed on your system and no changes are made to your shell environment. Simply include the `gdm` in your project root and all collaborators can assemble the same dependency configuration by one call to this script.
+* A given requirement specifies the version as the value of a git tag (or pattern matching that value) or a commit hash.
+* Disk space efficient: inspired by [pnpm](https://www.npmjs.com/package/pnpm/v/3.7.0-3), if multiple projects on a particular machine have the same requirement, they reference the same files (via hard links) such that no additional storage is required.
+* Low barrier to participation:
+  * `gdm` is a "no publish," meaning any dependency that is available to be cloned as a git repository is by default a "package" available via `gdm`.
+  * Your collaborators needn't have anything preinstalled: simply include a configuration script in your project root and all collaborators can assemble the same dependency configuration by one call to this script.
+
 
 # News
 
@@ -40,6 +29,8 @@ version of the dependency could be corrupted.
 Just run `./gdm conf` to be sure for now. This will be remedied soon!
 
 # Installation
+
+
 
 
 ```sh

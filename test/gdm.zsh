@@ -10,11 +10,10 @@ export GDM="${GDM:=${0:a:h:h}/dist/gdm-test.zsh}" #TEST
 
 # Add any setup functions here
 
-config() {
+require() {
   # Example:
   # gdm require juce-framework/JUCE#develop as=juce-dev setup='rm -rf .git'
   gdm require juce-framework/JUCE#develop
-  gdm require shitmakers/shit#main
   gdm require shitmakers/shit#main
 } 
 
@@ -24,7 +23,7 @@ if ! [[ -f "$GDM" ]] ; then
   mkdir -p "$GDM:h" && curl "https://raw.githubusercontent.com/Jeff-Russ/git-dependency-manager/main/dist/$GDM:t" > "$GDM" ;
 fi
 
-config.lock() {
+require.lock() {
 
 }
 

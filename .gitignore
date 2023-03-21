@@ -1,1 +1,6 @@
+.vscode
 Ignored*
+Trash*
+gdm_require*
+/gdm.conf.zsh
+gdm-test.zsh

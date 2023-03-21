@@ -1,0 +1,157 @@
+#!/usr/bin/env zsh
+
+if (($#==0)) || { (($#==1)) && [[ "$1" == '--help' ]] } ; then
+  echo "run will execute arguments considered executable, passing any subsequent non-executable arguments as it's arguments,"
+  echo "    where only function names and 'source' are 'executable' (the latter required as least a file argument).\n"
+  echo "    NOTE: Many of the function arguments for run are meant to export the environment variable GDM to your shell "
+  echo "          environment which won't"'happen unless you `source ./run <exec> [<args...>]` or `. ./run <exec> [<args...>]`'
+  echo "          from a zsh terminal. However, there can be more than one executable/args series in a single call to run"
+  echo "          which you can leverage to execute anything that needs GDM or other environment variables before run returns. "
+  echo "\nFunction arguments: run itself contains the following functions intended to be called by passing them to run:\n"
+  echo "    setGDM [registry|src|dist] [<args for \$GDM>] "
+  echo "         setGDM selects the value for GDM (path of the gdm executable) and exports it for execution (\$GDM <args...>)."
+  echo "         \$1: (default is registry, accepting "" to skip) chooses value \$GDM (by export it) as uncompiled src/"
+  echo "              (via gdm-src.zsh), compiled dist/gdm-\$GDM_VERSION.zsh or installed \$GDM_REGISTRY/gdm-\$GDM_VERSION.zsh"
+  echo "         \$2-\$n: If additional arg are passed, they are gdm_args and \`source \$GDM \$gdm_args\` is run.\n"
+  echo "    compile [to=dist|registry] [as=<insert-as-version>]"
+  echo "         compiles src/ to a destination chosen by arguments or dist/gdm-\$GDM_VERSION.zsh if non provided."
+  echo "         to  set to 'dist' (default) sets directory to dist/ and"
+  echo "             set to 'registry' or anything starting 'gdm_reg' or 'reg' (case insensitive) sets it to \$GDM_REGISTRY"
+  echo "         as=\$value sets the filename to 'gdm-\$value.zsh', defaulting to value=\$GMD_VERSION as from an export in src/"
+  echo "             NOTE that 'gdm-test.zsh' is gitignored so \`. ./run compile as=test\` is useful for a quick, throw-away test."
+  echo "    show.gdm   # Show all functions starting with gdm and all variables starting GDM_\n"
+  echo "    unload.gdm # unfunction all functions starting with gdm and unset all variables starting GDM_\n"
+  return 0
+fi
+
+
+export _RUN="${0:a}" # Note: only correct if $0 is in root of gdm repo: so don't move this file
+export _GDM_WORKROOT="${_RUN:h}" # Note: only correct if $0 is in root of gdm repo: so don't move this file
+export SRC_FILES=() # will be set in _export_SRC_FILES()
+# export _GDM_TESTMODE=true
+
+compile() {
+  local compile_args=("$@") ; shift $# # clear $@ because it would be automatically forwarded to any script that is sourced!
+
+  # parse arguments to determine destination...
+  local to="$_GDM_WORKROOT/dist" # default
+  local as="" # will default to "gdm-$WORKING_VERSION.zsh"
+
+  for arg in "${compile_args[@]}" ; do
+    if [[ $arg =~ '^to=.+' ]] ; then
+      local val="$arg[4,-1]"
+      if   [[ "$val" == dist ]] ; then to="$_GDM_WORKROOT/dist"
+      elif echo "$val" | grep -iE '^(gdm_reg|reg)' >/dev/null ; then to="$HOME/.gdm_registry"
+      else to="$val"
+      fi
+    elif [[ $arg =~ '^as=.+' ]] ; then as="gdm-${arg[4,-1]}.zsh"
+    else echo "unknown option: $arg" >&2 ; return 1
+    fi
+  done
+  if [[ -z "$as" ]] ; then 
+    source "$_GDM_WORKROOT/src/0-gdm-header.zsh" # gets GDM_VERSION
+    as="gdm-$GDM_VERSION.zsh"
+  fi
+  unload.gdm
+
+  # Do the "compile" part...
+  local destin="$to/$as"
+  mkdir -p "$destin:h"
+  _export_SRC_FILES
+  
+  cat $SRC_FILES > "$destin"
+  chmod +x "$destin"
+  export GDM="$destin"
+  echo "compiled to:\n  export GDM=\"$GDM\""
+
+  # _ifNonSourceNoExportWarn "$_RUN" $0 $@ || return $?
+  _ifNonSourceNoExportWarn "$_RUN" $0 "$compile_args[@]" --exports="GDM"
+  return 0
+
+
+}
+
+setGDM () {
+  # _ifNonSourceNoExportWarn "$_RUN" $0 $@ || return $?
+  local set_to="$1" ; shift
+  local gdm_args=("$@") ; shift $# # clear $@ because it would be automatically forwarded to any script that is sourced!
+
+  local _gdm
+  if [[ "$set_to" == src ]] ; then _gdm="$_GDM_WORKROOT/gdm-src.zsh" # source non-compiled in src/
+  else  # first, gets GDM_VERSION and GDM_REGISTRY:
+    source "$_GDM_WORKROOT/src/0-gdm-header.zsh" 
+    if [[ "$set_to" == dist ]] ; then _gdm="$_GDM_WORKROOT/dist/gdm-$GDM_VERSION.zsh" # source compiled in dist/
+    else _gdm="$GDM_REGISTRY/gdm-$GDM_VERSION.zsh" # source current working version in $GDM_REGISTRY
+    fi
+  fi
+
+  ! [[ -f "$_gdm" ]] && { echo "File does not exist!: \"$_gdm\"" >&2 ; return 1 ; }
+  unload.gdm
+  export GDM="$_gdm"
+  
+  if (($#gdm_args)) ; then source "$GDM" "$gdm_args[@]"
+  else echo "setGDM:\n  export GDM=\"$GDM\""
+  fi
+  _ifNonSourceNoExportWarn "$_RUN" $0 "$set_to" "$gdm_args[@]" --exports="GDM" ; return 0
+
+}
+
+
+# Show all functions starting with gdm and all variables starting GDM_
+show.gdm() { echo "gdm* function:" ; print -l ${(ok)functions} | grep -E '^gdm' ; env | grep -E '^GDM' ;  }
+
+
+# unfunction all functions starting with gdm and unset all variable starting GDM_
+unload.gdm() { unfunction -m gdm "gdm.*" ; unset -m "GDM_*" ; }
+
+_export_SRC_FILES() {
+  _ifNonSourceNoExportWarn "$_RUN" $0 $@ || return $?
+  export SRC_FILES=()
+  for src_file in "${(@f)$(ls "$_GDM_WORKROOT/src/" | sort -g)}" ; do # ls in "natural order" (so 101 comes after 11)
+    SRC_FILES+=("$_GDM_WORKROOT/src/$src_file")
+  done
+}
+
+_execArgs() {
+  local cl_args=("$@")
+  shift $# # clear $@ because it would be automatically forwarded to any script that is sourced!
+  local exec_me=()
+
+  for cl_arg in "${cl_args[@]}" ; do
+    if typeset -f "$cl_arg" >/dev/null 2>&1 || [[ $cl_arg == source ]] ; then # || { [[ -f "$cl_arg" ]] && [[ -x "$cl_arg" ]] } ; then # 
+      (($#exec_me)) && "$exec_me[@]" # || return $?
+      exec_me=("$cl_arg") 
+    else 
+      exec_me+=("$cl_arg")
+    fi
+  done
+  (($#exec_me)) && "$exec_me[@]" # DO NOT try any other syntax but "$exec_me[@]"
+  return $?
+}
+
+
+_ifNonSourceNoExportWarn() {
+  local file="${1:a}" ; shift
+  local file_args=()
+  local exports_msg="Exports are not"
+  for arg in "$@" ; do
+    [[ "$arg" =~ '^--exports=.+' ]] && exports_msg="${arg[11,-1]} won't be" || file_args+=("$arg")
+  done
+
+  if ! [[ $ZSH_EVAL_CONTEXT =~ ':file' ]] ; then
+    local file_relpath="${file//$PWD/.}"
+    if [[ "$file_relpath" == "$file" ]] ; then 
+      file_relpath="../${file:t}"
+      while ! [[ -f "$file_relpath" ]] ; do file_relpath="../$file_relpath" ; done
+    fi
+    echo -n "WARNING: $exports_msg exported to your shell unless $file_relpath is sourced from a zsh terminal. Try:\n  . $file_relpath "
+    for a in "${file_args[@]}" ; do [[ "$a" =~ '( |^$)' ]] && echo -n "\"$a\" " || echo -n "$a " ; done 
+    echo
+    # return 1
+  fi
+  return 0
+}
+
+
+_execArgs "${@[@]}"
+return $?
