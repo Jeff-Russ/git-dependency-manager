@@ -1,7 +1,8 @@
 gdm.register() {
   # Input is the following arguments:
   #     [https://][domain]<vendor>/<repo>[.git][#<hash>|<tag>|<branch>] [ setup=<function>|<script_path>|cmd> ] [ to=<path> | as=<dirname> ]
-  local outputVars=(remote_url rev rev_is hash tag branch setup_hash regis_parent_dir regis_prefix regis_suffix 
+  # 
+  local outputVars=(remote_url rev rev_is hash tag branch destin_option setup setup_hash regis_parent_dir regis_prefix regis_suffix 
       previously_registered register_created regis_instance regis_manifest regis_snapshot destin_instance requirement_lock) 
   
   local force_re_register=false
@@ -24,7 +25,7 @@ gdm.register() {
 
   local requirement error 
   requirement="$(gdm_parseRequirement $@)" || return $? # FUNCTION CALL
-  local remote_url rev rev_is hash tag branch setup_hash regis_parent_dir regis_prefix regis_suffix regis_instance destin_instance
+  local remote_url rev rev_is hash tag branch destin_option setup setup_hash regis_parent_dir regis_prefix regis_suffix regis_instance destin_instance
   
   # The above are requirement vars set by eval of output from gdm_parseRequirement:
   #   remote_url=<expanded from repo_identifier, usualy lowercased)
@@ -33,6 +34,7 @@ gdm.register() {
   #   hash=<full_hash (lowercased) from repo_identifier>
   #   tag=[<full_tag not lowercased>]
   #   branch=[<branch_name not lowercased>]
+  #   destin_option=as|to-proj-as|to-fs-as|to-proj-in|to-fs-in       (never blank-'as' if not provided)
   #   setup_hash=[hash of setup if passed] 
   #   regis_parent_dir="$GDM_REGISTRY/domain/vendor/repo"
   #   regis_prefix="<tag if found>|<estim. short hash if no tag>"
@@ -72,7 +74,10 @@ gdm.register() {
   local previously_registered=false
   local register_created=false
 
-  eval "$(gdm_fromMap GDM_ERRORS --local --all)" || { echo "$(_S R E)gdm_error_code_misread$(_S)" >&2  ; return $GDM_ERRORS[gdm_error_code_misread] }
+  # load GDM_ERRORS (expand associate keys as local variables)
+  if ! eval "$(gdm_fromMap GDM_ERRORS --local --all)" ; then 
+    echo "$(_S R E)gdm_error_code_misread$(_S)" >&2  ; return $GDM_ERRORS[gdm_error_code_misread]
+  fi
 
   if $manifest_found ; then
     local prev_reg_error=0
@@ -106,7 +111,7 @@ gdm.register() {
   # if $dry_run && gdm_echoVars $outputVars ; return 1 ; fi
   
   # remote_url rev rev_is hash tag branch  setup destin_instance regis_parent_dir regis_prefix regis_suffix previously_registered register_created regis_instance regis_manifest regis_snapshot #changed gdm_register_path to regis_instance
-  if $force_re_register ; then  echo "$(_S M)Generating new registration for $@$(_S) Reason: --force-re-register" >&2 ; fi
+  if $force_re_register ; then echo "$(_S M)Generating new registration for $@$(_S) Reason: --force-re-register" >&2 ; fi
 
   # REMOVE OLD BEFORE (RE)CREATING REGISTER:
   [[ -d "$regis_instance" ]] && rm -rf "$regis_instance" ; #NEW

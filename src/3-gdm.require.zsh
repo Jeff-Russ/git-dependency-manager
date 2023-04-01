@@ -2,16 +2,16 @@
 gdm.require() {
 
   # --reset-unused-register --reset-lone-instance --reset-lone-instance 
+  # echo "call# $PROJ_CONFIG_IDX to gdm.require got $# arguments: $@"
 
-  if [[ -z "$GDM_PROJ_ROOT" ]] ; then
-    gdm.init || return $?
-    echo "GDM_CALL_STATUS=$GDM_CALL_STATUS"
-  fi
-  echo "  gdm require $@"
+  # if [[ -z "$GDM_PROJ_ROOT" ]] ; then
+  #   gdm.init >/dev/null || return $?
+  #   echo "GDM_CALL_STATUS=$GDM_CALL_STATUS"
+  # fi
+  # echo "  gdm require $@"
 
-  GDM_FFTRACE=("${functrace[@]}") 
-  gdm_echoVars GDM_FFTRACE
-  return
+  # GDM_FFTRACE=("${functrace[@]}") 
+  # gdm_echoVars GDM_FFTRACE
 
   # if ! (($#)) ; then
   #   echo "$(_S Y)\$gdm.require received no arguments!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument]
@@ -20,7 +20,12 @@ gdm.require() {
 
   # $force_re_register && force_re_require=true
 
-  eval "$(gdm_fromMap GDM_ERRORS --local --all)" || { echo "$(_S R E)gdm_error_code_misread$(_S)" >&2  ; return $GDM_ERRORS[gdm_error_code_misread]  ; }
+  [[ -z "$PROJ_ROOT" ]] && PROJ_ROOT="$PWD" ; # TODO: this is unsafe: PROJ_ROOT should always be non-empty in require
+
+  # load GDM_ERRORS (expand associate keys as local variables)
+  if ! eval "$(gdm_fromMap GDM_ERRORS --local --all)" ; then 
+    echo "$(_S R E)gdm_error_code_misread$(_S)" >&2  ; return $GDM_ERRORS[gdm_error_code_misread]
+  fi
   
   local registration ; local reg_error=0
   registration="$(gdm.register $@)" || reg_error=$?
@@ -77,8 +82,9 @@ gdm.require() {
     fi
 
     local destin_instance_backup
-    destin_instance_backup="$(_renameDir $destin_instance)" || 
-      { echo "$(_S R) attempt to backup \"${destin_instance//$PWD/.}\" failed" ; return $left_corrupted }
+    if ! destin_instance_backup="$(_renameDir $destin_instance)" ; then
+      echo "$(_S R) attempt to backup \"${destin_instance//$PWD/.}\" failed" ; return $left_corrupted
+    fi
     echo "$(_S Y S)Previous installation was backed up to \"${destin_instance_backup//$PWD/.}\"\nYou may want to delete this if it is not needed."
     prev_inst_error=$instance_missing
   fi

@@ -27,7 +27,10 @@ gdm_validateInstance() {
   # local_assignments ets values for each "local $@"
   local $@ ; eval "$local_assignments" || return $?
 
-  eval "$(gdm_fromMap GDM_ERRORS --local --all)" || return $?
+  # load GDM_ERRORS (expand associate keys as local variables)
+  if ! eval "$(gdm_fromMap GDM_ERRORS --local --all)" ; then 
+    echo "$(_S R E)gdm_error_code_misread$(_S)" >&2  ; return $GDM_ERRORS[gdm_error_code_misread]
+  fi
 
   ! [[ -d "$instance" ]] && return $instance_missing
   ! [[ -f "$manifest" ]] && return $manifest_missing
@@ -52,6 +55,10 @@ gdm_validateInstance() {
   return 0
 }
 
+
+
+###### gdm_validateInstance Helpers ###############################################################
+
 gdm_snapshotDiff() {
   local show_diff=false
   if [[ "$1" == '--show-diff' ]] ; then show_diff=true ; shift ; fi
@@ -68,4 +75,14 @@ gdm_snapshotDiff() {
   [[ -z "$output" ]] && return 0
   $show_diff && echo 
   return $GDM_ERRORS[snapshot_check_mismatch]
+}
+
+gdm_swapDotGits() {
+  local parentdir_A="${1:a}"
+  local parentdir_B="${2:a}"
+  local tempdir_A=$(mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir')
+  gdm_mvSubdirsTo "$parentdir_A" '.git' "$tempdir_A" 
+  gdm_mvSubdirsTo "$parentdir_B" '.git' "$parentdir_A"
+  gdm_mvSubdirsTo "$tempdir_A" '.git' "$parentdir_B"
+  rm -rf "$tempdir_A"
 }
