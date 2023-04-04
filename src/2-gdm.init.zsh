@@ -84,8 +84,7 @@ gdm_loadProj() {
   fi
   echo "gdm_exportFromProjVars assigments=\n$assigments" #TEST
 
-
-  GDM_PROJ_VARS="$(gdm_echoVars --declare-local call_status proj_root proj_conf config_was config_startline config_endline lock_startline lock_endline errors)"
+  GDM_PROJ_VARS="$(gdm_echoVars --local --append-array call_status proj_root proj_conf config_was config_startline config_endline lock_startline lock_endline errors)"
 
   gdm_exportFromProjVars || return $?
   # call_err=$? ; ((call_err)) && return $?
@@ -226,7 +225,7 @@ gdm.locateProject() {
     elif [[ "$arg" ==  --validate-sript ]] ;   then gdm_validateConf_flags+=("$arg")
     else 
       errors+=("Unexpected argument to gdm.validateConf: $arg") 
-      gdm_echoVars errors
+      gdm_echoVars --append-array errors
       return 1
     fi
   done
@@ -299,7 +298,7 @@ gdm.locateProject() {
   fi
 
   if ((ret_code!=0)) ; then
-    gdm_echoVars call_status config_was proj_root proj_conf errors 
+    gdm_echoVars --append-array call_status config_was proj_root proj_conf errors
     return $ret_code
   fi
   
@@ -312,10 +311,10 @@ gdm.locateProject() {
     
     if ((eval_err)) ; then
       errors+="Unexpected Error in gdm.locateProject: eval of gdm.validateConf output resulted in error code $eval_err"
-      gdm_echoVars call_status config_was proj_root proj_conf errors
+      gdm_echoVars --append-array call_status config_was proj_root proj_conf errors
       return $eval_err
     elif ((call_err)) ; then
-      gdm_echoVars call_status config_was proj_root proj_conf errors
+      gdm_echoVars --append-array call_status config_was proj_root proj_conf errors
       return $call_err
     fi 
   elif [[ "$config_was" == missing ]] ; then
@@ -326,7 +325,7 @@ gdm.locateProject() {
       proj_conf="$proj_root/$GDM_REQUIRE_CONF" 
       source "$proj_conf"
     else
-      gdm_echoVars call_status config_was proj_root proj_conf errors 
+      gdm_echoVars --append-array call_status config_was proj_root proj_conf errors 
       return $GDM_ERRORS[no_project_found]
     fi
   fi
@@ -337,14 +336,14 @@ gdm.locateProject() {
   
   if ((eval_err)) ; then
     errors+=("Unexpected Error in gdm.locateProject: eval of gdm.locateConfSections output resulted in error code $eval_err")
-    gdm_echoVars call_status config_was proj_root proj_conf errors config_startline config_endline lock_startline lock_endline
+    gdm_echoVars --append-array call_status config_was proj_root proj_conf errors config_startline config_endline lock_startline lock_endline
     return 1
   elif ((call_err)) ; then
-    gdm_echoVars call_status config_was proj_root proj_conf errors config_startline config_endline lock_startline lock_endline 
+    gdm_echoVars --append-array call_status config_was proj_root proj_conf errors config_startline config_endline lock_startline lock_endline
     return $call_err
   else
     [[ "$config_was" == found ]] && config_was=valid # why check? We don't set to valid if  "$config_was" == created since it's always valid
-    gdm_echoVars call_status config_was proj_root proj_conf errors config_startline config_endline lock_startline lock_endline
+    gdm_echoVars --append-array call_status config_was proj_root proj_conf errors config_startline config_endline lock_startline lock_endline
     return 0
   fi
 }
@@ -383,7 +382,7 @@ gdm.validateConf() {
     elif [[ "$arg" ==  --validate-sript ]] ; then validate_script=true
     else 
       errors+=("Unexpected argument to gdm.validateConf: $arg") 
-      gdm_echoVars errors
+      gdm_echoVars --append-array errors
       return 1
     fi
   done
@@ -419,7 +418,7 @@ gdm.validateConf() {
     errors+=("export config (array) not found in \"$conf_file\"") 
   fi
 
-  gdm_echoVars errors 
+  gdm_echoVars --append-array errors
 
   if (($#errors)) ; then 
     for backup in $backups ; do eval "$backup" ; done # RESTORE BACKUPS
@@ -523,7 +522,7 @@ gdm.locateConfSections() {
 
   
 
-  gdm_echoVars config_startline config_endline lock_startline lock_endline errors 
+  gdm_echoVars --append-array config_startline config_endline lock_startline lock_endline errors
   if (($#errors)) ; then 
     return $GDM_ERRORS[malformed_config_file]  ;
   else return 0

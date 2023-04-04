@@ -1,6 +1,6 @@
 
 gdm_validateInstance() {
-  # Input: after any optional flags pass an eval-able declaration of local vars as the next argument
+  # Input: [--allow-lone] [--disallow-lone] manifest instance snapshot local_assignments
   #        followed by optional flags and the remaining args are var names that should be defined in manifest 
   # Output: no output... only a returned error from GDM_ERRORS or a return of 0
   # NOTE: $assignments as show below must define, at minimum: manifest instance snapshot and, in addition,
@@ -68,7 +68,7 @@ gdm_snapshotDiff() {
   # ! [[ -d "$instance" ]] && return $GDM_ERRORS[instance_missing]
   ! [[ -d "$snapshot" ]] && return $GDM_ERRORS[regis_snapshot_missing]
 
-  gdm_swapDotGits "$instance" "$snapshot" || return $GDM_ERRORS[snapshot_check_failed]
+  gdm_swapDotGits "$instance" "$snapshot" || return $GDM_ERRORS[snapshot_check_failed] # possibly left_corrupted
   local output error ; output=$(cd "$instance" && git status --porcelain) ; error=$?
   gdm_swapDotGits "$instance" "$snapshot" || return $GDM_ERRORS[snapshot_check_failed]
   ((error)) && return $GDM_ERRORS[snapshot_check_failed]
