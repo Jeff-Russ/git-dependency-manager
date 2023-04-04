@@ -31,13 +31,13 @@ gdm_expandRemoteRef() {
   local remote_url
 
   if ! remote_url="$( gdm_gitExpandRemoteUrl "$remote_ref" )" ; then
-    remote_ref="${1%#*}"
+    remote_ref="${1%#*}" # ${1%#*} is abbreviated remote_url (everything before #<hash>|#<tag>)
     if ! remote_url="$( gdm_gitExpandRemoteUrl "$remote_ref" )" || [[ -z "$remote_url" ]] ; then
       echo "$(_S R)Cannot expand Remote Url from $remote_ref$(_S)" >&2 ; return $GDM_ERRORS[cannot_expand_remote_url]
     fi
   fi
-  # FUNCTION CALL  ${1%#*} is abbrev. remote_url (everytihng before #<hash>|#<tag>)
-  local rev="${1##*#}" ;  [[ "$1" == "$rev" ]] && rev=""
+  
+  local rev="${1##*#}" ;  [[ "$1" == "$rev" ]] && rev="" # ${1##*#}" is everything after #
   local provided="$rev" # backup before possibly setting to default branch (next line).
 
   [[ -z $rev ]] || [[ $rev == 'HEAD' ]] && rev="$(git remote show $remote_url | sed -n '/HEAD branch/s/.*: //p')" # default branch
@@ -90,6 +90,93 @@ gdm_gitExpandRemoteUrl() {
   fi
   echo "$remote_url" ; return 0
 }
+
+gdm_parseIfDesinationOption() {
+  # To be called in loop iterating each argument to require that may be and option to set the install detination.
+
+  # IF $1 is an install destination option and is without error, return is 0 and output is assignments of:
+  #     to_lock     (the install path that would appear after `to=` (name | abs path | relpath starting ../ or ./)) 
+  #     abs_target  (complete absolute path to install requirement to)
+  # ELIF $1 is an install destination option with an error, return is $GDM_ERRORS[invalid_argument] and the error is output to stderr 
+  # ELSE $1 is not an install detination option, return is 0 and output is empty
+  # Usage: place in loop as 
+  #     if ! destin_assignments="$(gdm_parseIfDesinationOption $arg)" ; then return $?
+  #     elif ! [[ -z "$destin_assignments" ]] ; then
+  #       local to_lock abs_target ; eval "$destin_assignments"  # then do something with them
+  local arg="$1"
+  local outputVars=(to_lock abs_target) 
+
+  if [[ "$arg" =~ '^to=.+' ]] ; then # the 'to=' format is used in requirement lock...
+    # so we'll convvert lock form to user's long form so  next if block gets it
+    echo "$0 found destination arg=$arg" >&2
+    if gdm_isNonPathStr "${arg#*=}" ;                                then arg="as=${arg#*=}"
+    elif [[ "${arg#*=}" == '/'* ]] ;                                 then arg="to-fs-as=${arg#*=}"
+    elif [[ "${arg#*=}" == '../'* ]] || [[ "${arg#*=}" == './'* ]] ; then arg="to-proj-as=${arg#*=}"
+    fi
+  fi
+
+  if [[ "${arg:l}" =~ '^-{0,2}as[=].+' ]] ; then
+    if ! gdm_isNonPathStr "${arg#*=}" ; then  # TODO: perhaps allow dir/subdir (just prevent starting with ../ ./ or /)
+      echo "$(_S R S)$1 \`as\` parameter must be a directory name and not a path!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument]
+    fi
+    local to_lock="${arg#*=}"
+    local abs_target="$PROJ_ROOT/$GDM_REQUIRED/${arg#*=}"
+    gdm_echoVars $outputVars
+
+  elif [[ "${arg:l}" =~ '^-{0,2}to-(proj|fs)-(in|as)[=].+' ]] ; then 
+    local val_provided="${arg#*=}" 
+    while [[ ${arg[1]} == - ]] ; do arg=${arg[2,-1]} ; done # trim all leading dashes
+
+    # CHECK FOR PATH LOCATION NOTATION ERRORS:
+    local notated_as="$(gdm_pathNotation $val_provided)" # possible values:
+    # 'relative to /'   'equivalent to /'   'relative to ../'  'equivalent to ../'
+    # 'relative to ./'  'equivalent to ./'  'relative to name'   'empty'  (but empty is not possible due to =.+)
+    if [[ "${arg:l}" == 'to-proj-'* ]] && [[ $notated_as == *' /' ]] ; then
+      echo "$(_S R S)Invalid argument (value cannot be absolute path starting /): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+    elif [[ "${arg:l}" == 'to-fs-'* ]] && [[ $notated_as != *' /' ]] ; then
+      echo "$(_S R S)Invalid argument (value must be absolute path starting /): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+    fi # there are other checks we could do like making sure not installing as / or ./ but that'll get ironed out later
+
+    # SET OUTPUT VARIABLE: abs_target
+    local val_target="$val_provided" ; [[ "${arg:l}" =~ '^to-(proj|fs)-in' ]] && val_target+="/$repo_name"
+    local abs_target 
+    if ! abs_target="$(abspath $val_target $PROJ_ROOT 2>&1)" ; then
+      echo "$(_S R S)Invalid argument: $arg $abs_target$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+    fi
+
+    # CHECK FOR PATH LOCATION ERRORS:
+    if [[ -f $val_target ]] || [[ -f $abs_target ]] ; then
+      echo "$(_S R S)Invalid argument (path resolves to or includes an existing file): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+    fi
+    local target_relto_proj="$(gdm_dirA_relto_B $abs_target $PROJ_ROOT t p)" 
+    local target_relto_req="$(gdm_dirA_relto_B $abs_target $PROJ_ROOT/$GDM_REQUIRED t r)"
+    if [[ "$target_relto_proj" == 't is p' ]] ; then # possible values:  "t contains p"  "t is contained by p"  "t is p"  "no relation" 
+      echo "$(_S R S)Invalid argument (value cannot be project root): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+    elif [[ "$target_relto_proj" == 't is contained by p' ]] && [[ "${arg:l}" == 'to-fs-'* ]] ; then 
+      echo "$(_S R S)Invalid argument (value cannot be within the project root): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+    elif [[ "$target_relto_req" == 't is r' ]] ; then # possible values:  "t contains r"  "t is contained by r"  "t is r"  "no relation" 
+      echo "$(_S R S)Invalid argument (value cannot be project's $GDM_REQUIRED): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+    elif [[ "$target_relto_req" == 't is contained by r' ]] ; then 
+      echo "$(_S R S)Invalid argument (value cannot be within project's $GDM_REQUIRED): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+    fi
+
+    # SET OUTPUT VARIABLE: to_lock
+    local to_lock
+    if [[ "${arg:l}" == 'to-fs-'* ]] ; then to_lock="$abs_target"
+    else # set to_lock to normalized relative path
+      if ! to_lock="$(relpath $abs_target $PROJ_ROOT 2>&1)" ; then 
+        echo "$(_S R S)Invalid argument: $arg $to_lock$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+      fi
+    fi
+    
+    gdm_echoVars $outputVars
+    
+  fi
+  return 0
+
+
+}
+
 
 # TODO: perhaps allow dir/subdir (just prevent starting with ../ ./ or /)
 gdm_isNonPathStr() {  # used in  helpers: gdm_parseRequirement  

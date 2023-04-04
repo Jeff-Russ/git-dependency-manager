@@ -4,7 +4,7 @@ gdm_parseRequirement() {
   # expected args: [domain/]vendor/repo[.git][#<hash>|#<tag or tag_patt>|#<branch>] [setup] [to=<path>|as=<dir_name>]
   #                which are the same arguments as expected by gdm.require
   #                 (1st arg is referred to here as $repo_identifier)
-  # output sets: remote_url rev rev_is hash tag branch to setup_hash regis_parent_dir regis_prefix regis_suffix regis_instance destin_instance lock
+  # output sets: remote_url rev rev_is hash tag branch to setup_hash regis_parent_dir regis_prefix regis_suffix regis_instance destin_instance
   #              which are the following (only line's value will be in \"\" and ending with semicolons):
   #   remote_url=<expanded from repo_identifier, usualy lowercased)  (never blank)
   #   rev=[<revision specfied after # in repo_identifier]            (may be blank)
@@ -20,7 +20,6 @@ gdm_parseRequirement() {
   #   regis_suffix=_setup-<setup hash>"                              (never blank)
   #   regis_instance=$regis_parent_dir/$regis_prefix$regis_suffix    (never blank)
   #   destin_instance=<full abs path to location where required>     (never blank)
-  #   lock=$remote_url#$hash to=\"$to\" $setup_hash $setup  (never blank)
   # NOTE "<estim. short hash if no tag>" is estimate that may need elongation (not done in this function)
 
   [[ -z "$PROJ_ROOT" ]] && PROJ_ROOT="$PWD" ; # TODO: this is unsafe: PROJ_ROOT should always be non-empty if called from project
@@ -68,72 +67,24 @@ gdm_parseRequirement() {
   local to_locks=()  # "<name>|<relpath>|<abspath>"
   local destin_instances=() # absolute path version of the previous array
 
+  local destin_assignments=""
+
   shift
   for arg in $@ ; do
 
-    if [[ "$arg" =~ '^to=.+' ]] ; then # the 'to=' format is used in requirement lock
-      # Convert lock form to user long form 
-      if gdm_isNonPathStr "${arg#*=}" ; then arg="as=${arg#*=}"
-      elif [[ "${arg#*=}" == '/'* ]] ; then
-        arg="to-fs-as=${arg#*=}"
-      elif [[ "${arg#*=}" == '../'* ]] || [[ "${arg#*=}" == './'* ]] ; then
-        arg="to-proj-as=${arg#*=}"
-      fi
-    fi
+    if ! destin_assignments="$(gdm_parseIfDesinationOption $arg >&2)" ; then 
+      return $GDM_ERRORS[invalid_argument]
+    elif ! [[ -z "$destin_assignments" ]] ; then
+      local to_lock abs_target ; eval "$destin_assignments" 
+      to_locks+=("$to_lock")
+      destin_instances+=("$abs_target")
 
-    if [[ "${arg:l}" =~ '^-{0,2}(s|setup)[=].+' ]] ; then
+    elif [[ "${arg:l}" =~ '^-{0,2}(s|setup)[=].+' ]] ; then
       if ! [[ -z "$setup" ]] ; then gdm_multiArgError "$1" '`setup` arguments' ; return $? ; fi
       setup="${arg#*=}" 
-    elif [[ "${arg:l}" =~ '^-{0,2}as[=].+' ]] ; then
-      if ! gdm_isNonPathStr "${arg#*=}" ; then  # TODO: perhaps allow dir/subdir (just prevent starting with ../ ./ or /)
-        echo "$(_S R S)$1 \`as\` parameter must be a directory name and not a path!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument]
-      fi
-      to_locks+=("${arg#*=}")
-      destin_instances+=("$PROJ_ROOT/$GDM_REQUIRED/${arg#*=}")
-
-    elif [[ "${arg:l}" =~ '^-{0,2}to-(proj|fs)-(in|as)[=].+' ]] ; then 
-      # DESTINATION LOCATION OPTIONS
-      local val_provided="${arg#*=}" 
-      while [[ ${arg[1]} == - ]] ; do arg=${arg[2,-1]} ; done # trim all leading dashes
-      local arg_l="${arg:l}" # make things cleaner
-
-      local notated_as="$(gdm_pathNotation $val_provided)" # possible values:
-      # 'relative to /'   'equivalent to /'   'relative to ../'  'equivalent to ../'
-      # 'relative to ./'  'equivalent to ./'  'relative to name'   'empty'  (but empty is not possible due to =.+)
-      if [[ "$arg_l" == 'to-proj-'* ]] && [[ $notated_as == *' /' ]] ; then
-        echo "$(_S R S)Invalid argument (value cannot be absolute path starting /): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
-      elif [[ "$arg_l" == 'to-fs-'* ]] && [[ $notated_as != *' /' ]] ; then
-        echo "$(_S R S)Invalid argument (value must be absolute path starting /): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
-      fi # there are other checks we could do like making sure not installing as / or ./ but that'll get ironed out later
-
-      local val_target="$val_provided" ; [[ "$arg_l" =~ '^to-(proj|fs)-in' ]] && val_target+="/$repo_name"
-      local abs_target="$(abspath $val_target $PROJ_ROOT)"
-
-      local target_relto_proj="$(gdm_dirA_relto_B $abs_target $PROJ_ROOT t p)" 
-      # possible values:     "t contains p"   "t is contained by p"   "t is p"   "no relation" 
-      local target_relto_req="$(gdm_dirA_relto_B $abs_target $PROJ_ROOT/$GDM_REQUIRED t r)"
-      # possible values:     "t contains r"   "t is contained by r"   "t is r"   "no relation" 
-
-      if [[ "$target_relto_proj" == 't is p' ]] ; then
-        echo "$(_S R S)Invalid argument (value cannot be project root): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
-      elif [[ "$target_relto_proj" == 't is contained by p' ]] && [[ "$arg_l" == 'to-fs-'* ]] ; then 
-        echo "$(_S R S)Invalid argument (value cannot be within the project root): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
-      elif [[ "$target_relto_req" == 't is r' ]] ; then
-        echo "$(_S R S)Invalid argument (value cannot be project's $GDM_REQUIRED): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
-      elif [[ "$target_relto_req" == 't is contained by r' ]] ; then 
-        echo "$(_S R S)Invalid argument (value cannot be within project's $GDM_REQUIRED): $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
-      fi
-
-      if [[ "$arg_l" == 'to-fs-'* ]] ; then
-        to_locks+=("$abs_target")
-      else
-        local rel_target="$(relpath $abs_target $PROJ_ROOT)" # normalized relative path
-        to_locks+=("$rel_target")
-      fi
-
-      destin_instances+=("$abs_target")
       
-    else echo "Invalid argument: $arg" >&2 ; return $GDM_ERRORS[invalid_argument]
+    else 
+      echo "$(_S R S)Invalid argument: $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
     fi
   done
   
@@ -146,7 +97,7 @@ gdm_parseRequirement() {
   local destin_instance="${destin_instances[1]}"
 
   local regis_parent_dir="$GDM_REGISTRY/${${remote_url#*//}:r}"
-  local regis_prefix="$tag" ;  [[ -z "$regis_prefix" ]] && regis_prefix=$hash[1,$GDM_MIN_HASH_LEN] # changed mind: no short hashes
+  local regis_prefix="$tag" ; [[ -z "$regis_prefix" ]] && regis_prefix=$hash[1,$GDM_MIN_HASH_LEN] 
   [[ -z "$regis_prefix" ]] && return 64
 
   ###### get value and type of setup command ##################################
@@ -184,14 +135,10 @@ gdm_parseRequirement() {
 
     regis_suffix="_setup-$setup_hash"
   fi
-  # echo -n "$requirement\nsetup=\"$setup\"\ndestin_instance=\"$destin_instance[1]\"\nregis_parent_dir=\"$GDM_REGISTRY/${${remote_url#*//}:r}\"\nregis_prefix=\"$regis_prefix\"\nregis_suffix=\"$regis_suffix\"" 
-  
+
   regis_parent_dir="$GDM_REGISTRY/${${remote_url#*//}:r}"
   regis_instance="$regis_parent_dir/$regis_prefix$regis_suffix"
 
-  local lock="$remote_url#$hash to=\"$to\" $setup_hash $setup"
-  # echo "$requirement" ; gdm_echoVars setup destin_instance registry_repo_dir registry_prefix registry_suffix #OLD
-  # OLD: gdm_echoVars remote_url rev rev_is hash tag branch setup_hash regis_parent_dir regis_prefix regis_suffix regis_instance destin_instance
-  gdm_echoVars remote_url rev rev_is hash tag branch to setup setup_hash regis_parent_dir regis_prefix regis_suffix regis_instance destin_instance lock
+  gdm_echoVars remote_url rev rev_is hash tag branch to setup setup_hash regis_parent_dir regis_prefix regis_suffix regis_instance destin_instance
 }
 
