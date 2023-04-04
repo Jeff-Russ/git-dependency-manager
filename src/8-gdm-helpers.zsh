@@ -130,78 +130,67 @@ USAGEDOC
 }
 
 gdm_echoVars() {
+  # gdm_echoVars accepts the the following, outputing the following by default:
+  # variable names
+  #    "<name>=\"<value>\" ; \n"                             # for each that is a scalar
+  #    "typeset <flags> <name>=([k1]=v [k2]='v 2' ...) ; \n" # for each hashes (associative)
+  #    "<name>=("v1" "v 2" ...) ; \n"                        # for each array
+  # args that begin with '#' or those that contain <valid_varname>=<somevalue>
+  #    "$arg\n"              # to output comments direct assignments of variable to some other value
+  # gdm_echoVars accepts the following option applying to all subsequent arguments:
+  #    --local
+  #    --local=true   # prepends 'local ' for scalars, arrays, assignments (that lack them), and sets <flags> to -A for hashes
+  #    --local=false  # resets to default (no prepending, <flags> as detected for hashes)
+  #    --append-array
+  #    --append-array=true   # assign arrays with +=( Note: this will force --local to false for arrays
+  #    --append-array=false  # resets to default: assigning with =(
+  #    --append-array|--append-array=true|--append-array=false    # same but for  hashes (associative)
+  #    --suffix=" ; \n"     # This is the default, as seen appended to out of each variable but can be bypassed:
+  #    --suffix=" ; "       # This would output inline assignments (does not apply to comments which always have newline)
+  #    --suffix=" "         # BEWARE: these would eval to an error but it suitable for parameterizing and forwarding to commands
+
+
   local declare_local=false
-  if [[ "$1" == --declare-local ]] ; then declare_local=true ;  shift ; fi
+  local append_array=false
+  local append_hash=false
+  local decl=""
+  local suffix=" ; \n"
   
-  for var_name in $@ ; do
-    if [[ "$var_name" =~ '^[ ]*#' ]] ; then echo  "$var_name ;" # echo comment
-    elif [[ "$var_name" =~ '^[a-zA-Z_]+[a-zA-Z0-9_]*=.+' ]] ; then  # custom variable name with assignment
-      if $declare_local && ! [[ "$var_name" =~ '^(local|typeset|declare) ' ]] ; then 
-        print -- "local ${var_name} ; " 
-      else print -- "${var_name} ; " ; fi
-    elif [[ "$(gdm_typeof $var_name)" =~ 'array' ]] ; then 
-      if $declare_local ; then  print -- "local $var_name=($(print -- \"${^${(P)var_name}}\")) ; " 
-      else # For arrays we aren't declaring as local...
-        # ...we append (helpful if evaled from place with array already existing. 
-        # If echoer has that array empty, this causes no issues (nothing is appended).
-        print -- "$var_name+=($(print -- \"${^${(P)var_name}}\")) ; "  ; fi
-    elif [[ "$(gdm_typeof $var_name)" =~ 'association' ]] ; then
-      if $declare_local ; then print -- "declare -A $var_name=$(gdm_mapVal $var_name) ;"
-      else print -- "$(typeset -p $var_name) ; "
-      fi
-    else
-      if $declare_local ; then print -- "local ${var_name}=\"${(P)var_name}\" ; "
-      else print -- "${var_name}=\"${(P)var_name}\" ; "
-      fi
+  for arg in $@ ; do
+    
+    # options:
+    if   [[ "$arg" =~ '^--local(=true)?$' ]] ; then decl="local " 
+    elif [[ "$arg" == --local=false ]] ;       then previx=""
+
+    elif [[ "$arg" =~ '^--append-array(=true)?$' ]] ; then append_array=true # overrides declare_local
+    elif [[ "$arg" == --append-array=false ]] ;       then append_array=false
+
+    elif [[ "$arg" =~ '^--append-hash(=true)?$' ]] ; then append_hash=true # overrides declare_local
+    elif [[ "$arg" == --append-hash=false ]] ;       then append_hash=false
+    
+    elif [[ "$arg" =~ '^--suffix=.+$' ]] ; then suffix="${arg#*=}" 
+
+    # arg is a variable name so echo it according to options
+    elif [[ -n "${(P)arg+set}" ]] ; then 
+      local name="$arg"
+
+      if [[ "$(gdm_typeof $name)" =~ 'array' ]] ; then
+        if $append_array ; then print -n -- "$name+=($(print -- \"${^${(P)name}}\"))$suffix"
+        else print -n -- "$decl$name=($(print -- \"${^${(P)name}}\"))$suffix" 
+        fi
       
+      elif [[ "$(gdm_typeof $name)" =~ 'association' ]] ; then
+        if $append_hash ; then
+          print -n -- "$name+=$(gdm_mapVal $name) ; "
+        elif [[ -z "$decl" ]] ; then print -n -- "$(typeset -p $name)$suffix"
+        else print -n -- "declare -A $name=$(gdm_mapVal $name)$suffix"
+        fi
+
+      else print -n -- "$decl${name}=\"${(P)name}\"$suffix"
+    fi
     fi
   done
 }
-
-# gdm_echoVars() {
-#   local declare_local=false
-#   local inline=false
-#   local no_semi=false
-#   local shifts=0
-#   for arg in $@ ; do 
-#     if   [[ "$arg" == --declare-local ]] ; then  declare_local=true ;  ((shifts++)) ;
-#     elif [[ "$arg" == --inline ]] ; then inline=true ; ((shifts++)) ;
-#     elif [[ "$arg" == --no-semi ]] ; then no_semi=true ; ((shifts++)) ;
-#     else break
-#     fi
-    
-#   done
-#   ((shifts)) && shift $shifts
-
-#   local append=" "
-#   ! $no_semi && append+="; "
-#   $inline && append+="\n"
-
-
-#   for var_name in $@ ; do
-#     if [[ "$var_name" =~ '^[ ]*#' ]] ; then echo  "$var_name ;" # echo comment
-#     elif [[ "$var_name" =~ '^[a-zA-Z_]+[a-zA-Z0-9_]*=.+' ]] ; then  # custom variable name with assignment
-#       if $declare_local && ! [[ "$var_name" =~ '^(local|typeset|declare) ' ]] ; then 
-#         print -- "local ${var_name} ; " 
-#       else print -- "${var_name} ; " ; fi
-#     elif [[ "$(gdm_typeof $var_name)" =~ 'array' ]] ; then 
-#       if $declare_local ; then  print -- "local $var_name=($(print -- \"${^${(P)var_name}}\")) ; " 
-#       else # For arrays we aren't declaring as local...
-#         # ...we append (helpful if evaled from place with array already existing. 
-#         # If echoer has that array empty, this causes no issues (nothing is appended).
-#         print -- "$var_name+=($(print -- \"${^${(P)var_name}}\")) ; "  ; fi
-#     elif [[ "$(gdm_typeof $var_name)" =~ 'association' ]] ; then
-#       if $declare_local ; then print -- "declare -A $var_name=$(gdm_mapVal $var_name) ;"
-#       else print -- "$(typeset -p $var_name) ; "
-#       fi
-#     else
-#       if $declare_local ; then print -- "local ${var_name}=\"${(P)var_name}\" ; "
-#       else print -- "${var_name}=\"${(P)var_name}\" ; "
-#       fi
-      
-#     fi
-#   done
-# }
 
 gdm_echoAndExec() {
   local err_code err_cap 
@@ -211,7 +200,7 @@ gdm_echoAndExec() {
   print -- "$(_S B)$(echo "${cmd//$GDM_REGISTRY/\$GDM_REGISTRY}" | head -1)$(_S)$append" >&2
   
   err_cap="$(eval "$@" 1>/dev/null 2>&1)" ; err_code=$?
-  if ((err_code)) ; then echo "$cap\n$(_S R S)Terminating due to error code $err_code$(_S)" >&2 ; return $err_code ; fi
+  if ((err_code)) ; then echo "$cap$(_S R S)Terminating due to previous command returning error code $err_code$(_S)" >&2 ; return $err_code ; fi
 }
 
 gdm_mapDecl() { local result ; result="$(typeset -p "$1")" || return $? ; } # unused
@@ -220,7 +209,6 @@ gdm_mapDecl() { local result ; result="$(typeset -p "$1")" || return $? ; } # un
 gdm_keyOfMapWithVal() { local evalable="\${(k)$1[(r)$2]}" ; eval "echo $evalable" || return $? ; }
 
 gdm_mapVal() { echo -n "(${"$(typeset -p "$1" 2>/dev/null)"#*'=('}" ; }
-
 
 gdm_fromMap() {
   if (($#<3)) ; then echo "$0 requires at least 3 args: name of associative array, --get.*, --all-a|<key>..." >&2 ; return 3 ; fi
@@ -246,45 +234,77 @@ gdm_fromMap() {
   fi
 }
 
+# ! which validpath 2>/dev/null 1>&2 && 
+# function validpath() {
+#   local path_segs=( ${(s:/:)wd} ) 
+#   while [[ -d "$nonexist" ]] && ((i<=$#path_segs)) ; do nonexist+="/${path_segs[$((i++))]}" ;
+# }
 
-! which abspath 2>/dev/null 1>&2 && 
+# ! which showErroneousNonDirInPath 2>/dev/null 1>&2 && #TODO: uncomment this line
+
+
+# ! which abspath 2>/dev/null 1>&2 && #TODO: uncomment this line
 function abspath(){ 
   if [[ -z "$1" ]] || (($#>2)) || [[ "$1" == --help ]] ; then
     print "abspath outputs an absolute path from \$1, relative path (which need not exist)" >&2
     print "        that is relative to a path \$2 (which also need not exist).\nUsage:" >&2
     print "  abspath \$relpath [\$wd_of_relpath] # where the 2nd argument defaults to \$PWD\nCaveats:" >&2
     print "  If the second argument is a relative path, it is assumed to be relative to \$PWD." >&2
-    print "  If the second argument does not exist, it cannot contain and path segments that:" >&2
-    print "    1) exist but are not directories or" >&2
-    print "    2) exist as directories which cannot be modified." >&2
+    print "Error Conditions (returning 1 with stderr similar to that from mkdir: 'Error: WD|WD contains|path contains \$location: Not a directory' ):"
+    print "  1) Either argument resolves to a path containing any parent segments existing as non-directories" >&2
+    print "  2) The second argument resolves to a path containing any parent segments which cannot be modified" >&2
     [[ "$1" != --help ]] && return 1 || return 0
   fi
 
   local target="$1"
   local wd="${2:a}" # local wd="$2" ; [[ "${wd[-1]}" == '/' ]] && wd="${2[1,-2]}"
 
-  if [[ -z "$wd" ]] || [[ "$wd" == "$PWD" ]] || [[ "$wd" == '/' ]]  ; then print "${target:a}" ; return $?  # make absolute path via $PWD or /
+  function showErroneousNonDirInAbsPath() {
+    # Example: showErroneousNonDirInPath /User/person/FILE/place # returns 1 with stdout: /User/person/FILE
+    # IF (abs path, existing or not) argument contains any parent segments existing as non-directories:
+    #   returns 1 with stdout (NOT stderr) of path up to and including the non-directory part
+    # Else, no output and return is 0. 
+    [[ -e "$1" ]] && return 0
+    local target="$1" 
+    while [[ "$target" != / ]] && ! [[ -e "$target" ]] ; do target="$target:h" ; done
+    [[ -d "$target" ]] && return 0
+    print "$target" ; return 1
+  }
+
+  local result non_dir
+
+  if [[ -z "$wd" ]] || [[ "$wd" == "$PWD" ]] || [[ "$wd" == '/' ]]  ; then
+    result="${target:a}" # make absolute path via $PWD or /
+    
   elif [[ -e "$wd" ]] ; then
-    ! [[ -d "$wd" ]] && { print "$0 provided second arguments cannot exist as non-directories (got '$2')" >&2 ; return 1 ; }
-    (cd $wd && print $target) || return $? # output absolute path from path relative to existing path
+    echo "HERE" #TEST
+    ! [[ -d "$wd" ]] && { print "Error: WD $wd: Not a directory" >&2 ; return 1 ; }
+    result="(cd $wd && print ${target:a})" || return $? # output absolute path from path relative to existing path
+  else
+    # else make absolute path from a path relative to a non-existing working dir by temporarily creating the working dir
+    local path_segs=( ${(s:/:)wd} )    # split by '/' delimiter (lack of quotes around expansion prevents empty elements).
+    local nonexist="/${path_segs[1]}"  # This will be the top (containing) directory to not exist i.e. the one to delete when 
+    local i=2                          # cleaning up. Additional segments beyond nonexist, if any, won't exist either.
+    while [[ -d "$nonexist" ]] && ((i<=$#path_segs)) ; do nonexist+="/${path_segs[$((i++))]}" ; done # accum up to non-existent segment
+    [[ -e "$nonexist" ]] && { print "Error: WD contains $nonexist: Not a directory" >&2 ; return 1 ; }
+    mkdir -p "$wd" || return $?            # Make temp directory(s). This will fail if, for example, making the path effectively adds a new user $HOME
+    result="(cd $wd && print ${target:a})" # Make absolute path from path relative to temp path
+    rm -rf "$nonexist"                     # Clean up temp directory(s) by removing them.
+  fi
+
+  if ! non_dir="$(showErroneousNonDirInAbsPath $result)" ; then
+    print "Error: path contains $non_dir: Not a directory" >&2 ; return 1 ;
+  else
+    print "$result"
     return 0
   fi
-  # else make absolute path from a path relative to a non-existing working dir by temporarily creating the working dir
-  local path_segs=( ${(s:/:)wd} )    # split by '/' delimiter (lack of quotes around expansion prevents empty elements).
-  local nonexist="/${path_segs[1]}"  # This will be the top (containing) directory to not exist i.e. the one to delete when 
-  local i=2                          # cleaning up. Additional segments beyond nonexist, if any, won't exist either.
-  while [[ -d "$nonexist" ]] && ((i<=$#path_segs)) ; do nonexist+="/${path_segs[$((i++))]}" ; done # accum up to non-existent segment
-  [[ -e "$nonexist" ]] && { print "$0 provided second arguments cannot contain non-directories (contained '$nonexist')." >&2 ; return 1 ; }
-  mkdir -p "$wd" || return $?        # Make temp directory(s). This will fail if, for example, making the path effectively adds a new user $HOME
-  print "$(cd $wd && print ${target:a})" # Make absolute path from path relative to existing path
-  rm -rf "$nonexist"                 # Clean up temp directory(s) by removing them.
 }
 
 
-! which relpath 2>/dev/null 1>&2 && 
+# ! which relpath 2>/dev/null 1>&2 &&  #TODO: uncomment this line
 function relpath(){
   # based on: https://stackoverflow.com/a/14914070
-  # NOTE: requires abspath
+  # NOTE: requires abspath and, as such, errors output the same stderr with same return of 1
   if [[ -z "$1" ]] || (($#>2)) || [[ "$1" == --help ]] ; then
     echo "$0 requires one or two arguments: a path string to be converted to a path" >&2
     echo "relative to the second argument or relative to \$PWD if no second argument given." >&2
@@ -296,9 +316,10 @@ function relpath(){
   if [[ -z "$current" ]] ; then current="$PWD"
   elif [[ -e "$current" ]] ; then current="${current:a}"
   else
-    # NOTE: ${1:a} would give erronous results if $current is not actually $PWD or if our
-    current="$(abspath $current)" || return $? # non-existent absolute path from current assuming current is relative to $PWD
-    target="$(abspath $target $current)" || return $? # non-existent absolute path from target assuming current is relative non-existent current
+    # non-existent absolute path from current assuming current is relative to $PWD:
+    if ! current="$(abspath $current 2>&1)" ; then print $current >&2 ; return 1 ; fi # (current is stderr if abspath fails)
+    # non-existent absolute path from target assuming current is relative non-existent current:
+    if ! target="$(abspath $target $current 2>&1)" ; then print $target >&2 ; return 1 ; fi # (current is stderr if abspath fails)
   fi
 
   local appendix=${target#/} # set appendix is target without any leading /
@@ -317,16 +338,3 @@ function relpath(){
   relative+=${relative:+${appendix:+/}}${appendix#/} # append to relative: '/' if relative AND appendix are non-null + $appendix w/o any leading /
   print $relative
 }
-
-# gdm_relpath() {
-
-#   while [[ "$relative[-1]" == '/' ]] ; do relative="$relative[1,-2]" ; done # remove trailing / (we may put back)
-#   if [[ $relative != *'/'* ]] ; then relative="./$relative" # prepend if no / anywhere or empty string
-#   elif [[ $relative =~ '^(\.\.|\.)$' ]] ; then  relative+=/  # .. to  ../    . to ./ 
-#   else 
-#     [[ $relative == *'/..' ]] && relative+=/ ; # */.. to */../
-#     [[ $relative =~ '^[^\.]+\/' ]] && relative="./$relative" ;
-#   fi
-#   echo $relative
-# }
-
