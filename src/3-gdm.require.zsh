@@ -1,4 +1,3 @@
-
 gdm.require() {
 
   # --reset-unused-register --reset-lone-instance --reset-lone-instance 
@@ -11,7 +10,7 @@ gdm.require() {
   # echo "  gdm require $@"
 
   # GDM_FFTRACE=("${functrace[@]}") 
-  # gdm_echoVars GDM_FFTRACE
+  # gdm_echoVars GDM_FFTRACE #ARRAY_APPEND -> GDM_FFTRACE
 
   # if ! (($#)) ; then
   #   echo "$(_S Y)\$gdm.require received no arguments!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument]
@@ -28,7 +27,7 @@ gdm.require() {
   fi
   
   local registration ; local reg_error=0
-  registration="$(gdm.register $@)" || reg_error=$?
+  registration="$(gdm.register $@)" || reg_error=$? #FUNCTION CALL: gdm.register
   # if $force_re_register ; then registration="$(gdm.register --force $@)" || error=$?
   # else registration="$(gdm.register $@)" || error=$?
   # fi
@@ -49,9 +48,10 @@ gdm.require() {
   local destin_manifest="$destin_instance/$regis_prefix$regis_suffix.$GDM_MANIF_EXT"
   local allow_orphan=true #TODO make this an argument option?
   local lone_allow='--disallow-lone' ; $allow_orphan && lone_allow='--allow-lone'
-  local assignments="$(gdm_echoVars $GDM_MANIF_VALIDATABLES)" 
+  local assignments="$(gdm_echoVars $GDM_MANIF_VALIDATABLES)" #TODO: shouldn't these be --local? see gdm_validateInstance
   local prev_inst_error
-  gdm_validateInstance $lone_allow $destin_manifest $destin_instance $regis_snapshot "$assignments" $GDM_MANIF_VALIDATABLES ; prev_inst_error=$? #changed gdm_register_path to regis_instance
+  gdm_validateInstance $lone_allow $destin_manifest $destin_instance $regis_snapshot "$assignments" $GDM_MANIF_VALIDATABLES #FUNCTION CALL: gdm_validateInstance
+  prev_inst_error=$? #changed gdm_register_path to regis_instance
   
 
   if ! ((prev_inst_error)) ; then echo "$(_S G)Previous valid installation found at \"${destin_instance//$PWD/.}\"$(_S)" ; return 0 ; fi
@@ -65,7 +65,8 @@ gdm.require() {
       echo "Suggested fix: $reinistall_msg"
       return $GDM_ERRORS[hardlink_failed]
     }
-    gdm_validateInstance "$assignments" regis_instance remote_url hash tag setup ; prev_inst_error=$?
+    gdm_validateInstance "$assignments" regis_instance remote_url hash tag setup #FUNCTION CALL: gdm_validateInstance
+    prev_inst_error=$? #TODO incorrect args???
   fi
 
   local backup_ables=($gdm_version_outdated $lone_instance $manifest_requirement_mismatch $instance_snaphot_mismatch) 
@@ -92,7 +93,8 @@ gdm.require() {
   if ((prev_inst_error==instance_missing)) ; then # destin_instance is missing
     echo "$(_S D S E)Installing to \"${destin_instance//$PWD/.}\" from \"${regis_instance//$GDM_REGISTRY/\$GDM_REGISTRY}\"$(_S)"
     gdm_echoAndExec "mkdir -p \"$destin_instance:h\"" || return $GDM_ERRORS[mkdir_$GDM_REQUIRED]
-    cp -al "$regis_instance" "$destin_instance" >/dev/null 2>&1 || return $GDM_ERRORS[hardlink_failed]
+    # cp -al "$regis_instance" "$destin_instance" >/dev/null 2>&1 || return $GDM_ERRORS[hardlink_failed] #OLD
+    gdm_echoAndExec "cp -al \"$regis_instance\" \"$destin_instance\"" || return $GDM_ERRORS[hardlink_failed] #NEW
     echo "$(_S G)Installation complete.$(_S)" ; return 0
   fi
 
