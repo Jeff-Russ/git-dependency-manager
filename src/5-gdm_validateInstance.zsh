@@ -5,11 +5,11 @@ gdm_validateInstance() {
   # Output: no output... only a returned error from GDM_ERRORS or a return of 0
   # NOTE: $assignments as show below must define, at minimum: manifest instance snapshot and, in addition,
   #       any of the remaining args that are variable names to be checked in the manifest.
-  # Example 1: #changed gdm_register_path to regis_instance
-  #   local assignments="$(gdm_echoVars manifest instance snapshot regis_instance remote_url hash tag setup)" #changed gdm_register_path to regis_instance
-  #   gdm_validateInstance "$assignments" regis_instance remote_url hash tag setup #changed gdm_register_path to regis_instance
-  # Example 2: #changed gdm_register_path to regis_instance
-  #   gdm_validateInstance "$assignments" regis_instance remote_url hash tag setup #changed gdm_register_path to regis_instance
+  # Example 1:
+  #   local assignments="$(gdm_echoVars manifest instance snapshot regis_instance remote_url hash tag setup)"
+  #   gdm_validateInstance "$assignments" regis_instance remote_url hash tag setup
+  # Example 2:
+  #   gdm_validateInstance "$assignments" regis_instance remote_url hash tag setup
 
   local allow_lone=true
   while [[ "$1" =~ '^--' ]] ; do

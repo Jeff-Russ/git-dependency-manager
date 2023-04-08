@@ -3,7 +3,7 @@ gdm.require() {
   # --reset-unused-register --reset-lone-instance --reset-lone-instance 
   # echo "call# $PROJ_CONFIG_IDX to gdm.require got $# arguments: $@"
 
-  # if [[ -z "$GDM_PROJ_ROOT" ]] ; then
+  # if [[ -z "$PROJ_ROOT" ]] ; then
   #   gdm.init >/dev/null || return $?
   #   echo "GDM_CALL_STATUS=$GDM_CALL_STATUS"
   # fi

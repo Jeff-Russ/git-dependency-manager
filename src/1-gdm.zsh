@@ -99,6 +99,11 @@ declare -Ag GDM_ERRORS=(
 
 gdm.error() { echo "${(k)GDM_ERRORS[(r)$1]}" ; } # reverse lookup return error codes (GDM_ERRORS)
 
+# currently accepted GDM_EXPERIMENTAL element values: destination_paths
+if [[ "$(gdm_typeof GDM_EXPERIMENTAL)" =~ 'array' ]] ; then
+    export GDM_EXPERIMENTAL # user has provided so just export to be safe
+else export GDM_EXPERIMENTAL=() # add experiemental modes to always enable if use did not specify
+fi
 
 # echo "GDM header got $# args: $@"
 
@@ -123,14 +128,14 @@ gdm() {
 
   if [[ "$operation" == 'config' ]] ||  [[ "$operation" == 'install' ]] ; then
     echo "$operation called"  #TEST
-    if [[ -z "$GDM_PROJ_ROOT" ]] ; then
+    if [[ -z "$PROJ_ROOT" ]] ; then
       local err_code
       echo "calling gdm_loadProj" #TEST
       gdm_loadProj --traverse-parents # DO NOT execute gdm_loadProj in subshell i.e. capture
       err_code=$?
       echo "gdm_loadProj returned $err_code" #TEST
       ((err_code)) && return $? 
-    else echo "$(_S Y)GDM_PROJ_ROOT was not empty!$(_S)"  #TEST
+    else echo "$(_S Y)PROJ_ROOT was not empty!$(_S)"  #TEST
     fi
     # gdm_echoProjVars #TEST
 
