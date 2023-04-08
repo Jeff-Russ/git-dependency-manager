@@ -51,7 +51,7 @@ gdm.require() {
   local assignments="$(gdm_echoVars $GDM_MANIF_VALIDATABLES)" #TODO: shouldn't these be --local? see gdm_validateInstance
   local prev_inst_error
   gdm_validateInstance $lone_allow $destin_manifest $destin_instance $regis_snapshot "$assignments" $GDM_MANIF_VALIDATABLES #FUNCTION CALL: gdm_validateInstance
-  prev_inst_error=$? #changed gdm_register_path to regis_instance
+  prev_inst_error=$?
   
 
   if ! ((prev_inst_error)) ; then echo "$(_S G)Previous valid installation found at \"${destin_instance//$PWD/.}\"$(_S)" ; return 0 ; fi

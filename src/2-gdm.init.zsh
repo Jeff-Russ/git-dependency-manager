@@ -520,8 +520,6 @@ gdm.locateConfSections() {
   fi
 
 
-  
-
   gdm_echoVars --append-array config_startline config_endline lock_startline lock_endline errors
   if (($#errors)) ; then 
     return $GDM_ERRORS[malformed_config_file]  ;

@@ -43,7 +43,7 @@ export GDM_REQUIRE_CONF="gdm.zsh"
 
 # environment variables used in require and register:
 export GDM_MANIF_EXT="gdm_manifest"
-export GDM_MANIF_VARS=(gdm_manifest_inode gdm_version regis_instance remote_url hash tag setup_hash) #changed gdm_register_path to regis_instance
+export GDM_MANIF_VARS=(gdm_manifest_inode gdm_version regis_instance remote_url hash tag setup_hash)
 export GDM_MANIF_VALIDATABLES=(regis_instance remote_url hash tag setup_hash)
 # used only in register:
 export GDM_SNAP_EXT="gdm_snapshot"
@@ -100,9 +100,7 @@ declare -Ag GDM_ERRORS=(
 gdm.error() { echo "${(k)GDM_ERRORS[(r)$1]}" ; } # reverse lookup return error codes (GDM_ERRORS)
 
 
-
 # echo "GDM header got $# args: $@"
-
 
 # PRE-FULLY-SOURCING EXECUTION SHORTCUT:
 if (($#==1)) && [[ "$1" =~ '^-' ]] ; then

@@ -1,6 +1,8 @@
 .vscode
 Ignored*
 Trash*
-gdm_require*
-/gdm.conf.zsh
 gdm-test.zsh
+*.drawio.bkp
+/test/*
+!/test/gdm.zsh
+

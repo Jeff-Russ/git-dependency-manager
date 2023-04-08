@@ -1,0 +1,269 @@
+<mxfile host="Electron" modified="2023-04-07T18:16:02.822Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.1.2 Chrome/106.0.5249.199 Electron/21.4.3 Safari/537.36" etag="jLCwbB9Orun_F2g2pHkj" version="21.1.2" type="device">
+  <diagram name="Page-1" id="5d7acffa-a066-3a61-03fe-96351882024d">
+    <mxGraphModel dx="2353" dy="913" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="#ffffff" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="21ea969265ad0168-10" value="gdm_parseRequirement" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="-290" y="220" width="230" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="21ea969265ad0168-11" value="&lt;b&gt;input&lt;/b&gt;: require_args&amp;nbsp;from gdm.require" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="21ea969265ad0168-10" vertex="1">
+          <mxGeometry y="26" width="230" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="21ea969265ad0168-12" value="&lt;b&gt;output&lt;/b&gt;:&amp;nbsp;remote_url rev rev_is hash tag branch to setup setup_hash regis_parent_dir regis_prefix regis_suffix regis_instance destin_instance" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="21ea969265ad0168-10" vertex="1">
+          <mxGeometry y="60" width="230" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="21ea969265ad0168-52" value="&lt;b&gt;side effects&lt;/b&gt;: none" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="21ea969265ad0168-10" vertex="1">
+          <mxGeometry y="120" width="230" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="21ea969265ad0168-13" value="&lt;b&gt;requires&lt;/b&gt;:&amp;nbsp;PROJ_ROOT" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="21ea969265ad0168-10" vertex="1">
+          <mxGeometry y="146" width="230" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="5u8rlO5TqYL3_Kq4vJBE-1" value="&lt;b&gt;Notes&lt;/b&gt;: if no tag, regis_prefix is provisional short hash" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="21ea969265ad0168-10" vertex="1">
+          <mxGeometry y="172" width="230" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="5u8rlO5TqYL3_Kq4vJBE-2" value="gdm_validateInstance" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="-320" y="540" width="260" height="272" as="geometry" />
+        </mxCell>
+        <mxCell id="5u8rlO5TqYL3_Kq4vJBE-3" value="&lt;b&gt;input&lt;/b&gt;:&amp;nbsp;[--allow-lone] [--disallow-lone] manifest&amp;nbsp;instance snapshot local_assignments manifest_vars_to_validate ...&lt;br&gt;NOTE: local_assignments must&amp;nbsp;define&amp;nbsp;any of the remaining args that are variable names to be checked in the manifest" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="5u8rlO5TqYL3_Kq4vJBE-2" vertex="1">
+          <mxGeometry y="26" width="260" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="5u8rlO5TqYL3_Kq4vJBE-4" value="&lt;b&gt;output&lt;/b&gt;: none (only a returned error from GDM_ERRORS or a return of 0&lt;span style=&quot;background-color: initial;&quot;&gt;)&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="5u8rlO5TqYL3_Kq4vJBE-2" vertex="1">
+          <mxGeometry y="120" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5u8rlO5TqYL3_Kq4vJBE-5" value="&lt;b&gt;side effects&lt;/b&gt;: none?" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="5u8rlO5TqYL3_Kq4vJBE-2" vertex="1">
+          <mxGeometry y="180" width="260" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="5u8rlO5TqYL3_Kq4vJBE-6" value="&lt;b&gt;requires&lt;/b&gt;:&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="5u8rlO5TqYL3_Kq4vJBE-2" vertex="1">
+          <mxGeometry y="206" width="260" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="5u8rlO5TqYL3_Kq4vJBE-7" value="&lt;b&gt;Notes&lt;/b&gt;:" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="5u8rlO5TqYL3_Kq4vJBE-2" vertex="1">
+          <mxGeometry y="232" width="260" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-1" value="gdm.require" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="-900" y="340" width="210" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-2" value="&lt;b&gt;input&lt;/b&gt;: flags + require args&lt;br&gt;Note: require args are:&amp;lt;vendor&amp;gt;/&amp;lt;repo&amp;gt;#&amp;lt;rev&amp;gt; [&amp;lt;LocationOpt&amp;gt;=&amp;lt;path|name&amp;gt;] [setup=&amp;lt;exec&amp;gt;]" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="ym04kheBPm6jvfA0F1Y5-1" vertex="1">
+          <mxGeometry y="26" width="210" height="74" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-4" value="&lt;b&gt;side effects&lt;/b&gt;:" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="ym04kheBPm6jvfA0F1Y5-1" vertex="1">
+          <mxGeometry y="100" width="210" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-3" value="&lt;b&gt;output&lt;/b&gt;:&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="ym04kheBPm6jvfA0F1Y5-1" vertex="1">
+          <mxGeometry y="126" width="210" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-5" value="&lt;b&gt;requires&lt;/b&gt;:" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="ym04kheBPm6jvfA0F1Y5-1" vertex="1">
+          <mxGeometry y="186" width="210" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-6" value="&lt;b&gt;Notes&lt;/b&gt;:&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="ym04kheBPm6jvfA0F1Y5-1" vertex="1">
+          <mxGeometry y="212" width="210" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-7" value="gdm.register" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="-630" y="80" width="240" height="392" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-8" value="&lt;b&gt;input&lt;/b&gt;: flags + same as gdm.require" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="ym04kheBPm6jvfA0F1Y5-7" vertex="1">
+          <mxGeometry y="26" width="240" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-30" value="&lt;b&gt;output&lt;/b&gt;:&amp;nbsp;remote_url rev rev_is hash tag branch destin_option setup setup_hash regis_parent_dir regis_prefix regis_suffix  previously_registered register_created regis_instance regis_manifest regis_snapshot destin_instance" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="ym04kheBPm6jvfA0F1Y5-7" vertex="1">
+          <mxGeometry y="60" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-9" value="&lt;b&gt;output&lt;/b&gt;:&amp;nbsp;remote_url rev rev_is hash tag branch destin_option setup setup_hash regis_parent_dir regis_prefix regis_suffix  previously_registered register_created regis_instance regis_manifest regis_snapshot destin_instance" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="ym04kheBPm6jvfA0F1Y5-7" vertex="1">
+          <mxGeometry y="160" width="240" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-10" value="&lt;b&gt;side effects&lt;/b&gt;: clones (and runs setup) to registry&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="ym04kheBPm6jvfA0F1Y5-7" vertex="1">
+          <mxGeometry y="270" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-11" value="&lt;b&gt;requires&lt;/b&gt;:" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="ym04kheBPm6jvfA0F1Y5-7" vertex="1">
+          <mxGeometry y="310" width="240" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-12" value="&lt;b&gt;Notes&lt;/b&gt;:&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="ym04kheBPm6jvfA0F1Y5-7" vertex="1">
+          <mxGeometry y="336" width="240" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="ym04kheBPm6jvfA0F1Y5-8" target="21ea969265ad0168-11" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="ym04kheBPm6jvfA0F1Y5-2" target="ym04kheBPm6jvfA0F1Y5-8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-29" value="$@" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="ym04kheBPm6jvfA0F1Y5-18" vertex="1" connectable="0">
+          <mxGeometry x="-0.6507" y="-7" relative="1" as="geometry">
+            <mxPoint x="-32" y="17" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.149;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="ym04kheBPm6jvfA0F1Y5-5" target="5u8rlO5TqYL3_Kq4vJBE-3" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-370" y="539" />
+              <mxPoint x="-370" y="580" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-24" value="$lone_allow $destin_manifest $destin_instance $regis_snapshot &lt;br&gt;&quot;$assignments_of_GDM_MANIF_VALIDATABLES&quot; &lt;br&gt;$GDM_MANIF_VALIDATABLES" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;" parent="ym04kheBPm6jvfA0F1Y5-20" vertex="1" connectable="0">
+          <mxGeometry x="-0.5193" relative="1" as="geometry">
+            <mxPoint x="61" y="-7" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.043;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="ym04kheBPm6jvfA0F1Y5-9" target="5u8rlO5TqYL3_Kq4vJBE-3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="ym04kheBPm6jvfA0F1Y5-6" target="5u8rlO5TqYL3_Kq4vJBE-3" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-420" y="580" />
+              <mxPoint x="-420" y="613" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ym04kheBPm6jvfA0F1Y5-28" value="&lt;span style=&quot;&quot;&gt;&quot;$assignments_of_GDM_MANIF_VALIDATABLES&quot;&lt;/span&gt;&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;regis_instance remote_url hash tag setup" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;" parent="ym04kheBPm6jvfA0F1Y5-27" vertex="1" connectable="0">
+          <mxGeometry x="-0.5577" y="2" relative="1" as="geometry">
+            <mxPoint x="61" y="2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-1" value="gdm_parseRequirement" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="760" y="71" width="250" height="390" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-2" value="&lt;b&gt;input&lt;/b&gt;: $flags +&amp;nbsp; $require_args&lt;br&gt;flags: --allow-lone | --disallow-lone" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-1">
+          <mxGeometry y="26" width="250" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-64" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;gdm_expandRemoteRef&lt;/font&gt;" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#EBEBEB;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12;glass=0;swimlaneLine=0;strokeColor=default;dashed=1;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-1">
+          <mxGeometry y="70" width="250" height="90" as="geometry">
+            <mxRectangle y="60" width="250" height="30" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-65" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;&lt;i&gt;input&lt;/i&gt;&lt;/span&gt;:&amp;nbsp;&lt;font style=&quot;border-color: var(--border-color); font-size: 10px;&quot;&gt;[https://][&amp;lt;domain&amp;gt;/]&amp;lt;vendor&amp;gt;/&amp;lt;repo&amp;gt;[.git][#&amp;lt;hash|tag|branch&amp;gt;]&amp;nbsp;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-64">
+          <mxGeometry y="26" width="250" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-66" value="&lt;i&gt;output&lt;/i&gt;:&amp;nbsp;&lt;font style=&quot;font-size: 10px;&quot;&gt;remote_url rev rev_is hash tag branch&lt;/font&gt;&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-64">
+          <mxGeometry y="60" width="250" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-67" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;gdm_parseIfDesinationOption&lt;/font&gt;" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#EBEBEB;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12;swimlaneLine=0;strokeColor=default;dashed=1;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-1">
+          <mxGeometry y="160" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-68" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;&lt;i style=&quot;&quot;&gt;input&lt;/i&gt;&lt;/span&gt;: &lt;font style=&quot;font-size: 10px;&quot;&gt;&amp;lt;any require option arg&amp;gt;&lt;font style=&quot;border-color: var(--border-color); font-size: 10px;&quot;&gt;&amp;nbsp;&lt;/font&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-67">
+          <mxGeometry y="26" width="250" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-69" value="&lt;i style=&quot;&quot;&gt;output&lt;/i&gt;:&lt;font style=&quot;background-color: initial; font-size: 10px;&quot;&gt;&amp;nbsp;destin_option destin_value to destin_instance&lt;/font&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&amp;nbsp;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-67">
+          <mxGeometry y="50" width="250" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-3" value="&lt;b&gt;output&lt;/b&gt;:&amp;nbsp;&lt;font style=&quot;font-size: 11px;&quot;&gt;remote_url rev rev_is hash tag branch to setup setup_hash regis_parent_dir regis_prefix regis_suffix&amp;nbsp;&lt;div style=&quot;&quot;&gt;&amp;nbsp; &amp;nbsp; regis_instance destin_instance regis_manifest regis_snapshot previously_registered previous_regis_error&lt;/div&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-1">
+          <mxGeometry y="250" width="250" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-5" value="&lt;b&gt;requires&lt;/b&gt;:&lt;font style=&quot;font-size: 10px;&quot;&gt;&amp;nbsp;GDM_MANIF_VALIDATABLES&amp;nbsp;&lt;br&gt;PROJ_ROOT&lt;br&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-1">
+          <mxGeometry y="350" width="250" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-7" value="gdm_validateInstance" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="770" y="540" width="260" height="272" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-8" value="&lt;b&gt;input&lt;/b&gt;:&amp;nbsp;[--allow-lone] [--disallow-lone] manifest&amp;nbsp;instance snapshot local_assignments manifest_vars_to_validate ...&lt;br&gt;NOTE: local_assignments must&amp;nbsp;define&amp;nbsp;any of the remaining args that are variable names to be checked in the manifest" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-7">
+          <mxGeometry y="26" width="260" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-9" value="&lt;b&gt;output&lt;/b&gt;: none (only a returned error from GDM_ERRORS or a return of 0&lt;span style=&quot;background-color: initial;&quot;&gt;)&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-7">
+          <mxGeometry y="120" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-10" value="&lt;b&gt;side effects&lt;/b&gt;: none?" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-7">
+          <mxGeometry y="180" width="260" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-11" value="&lt;b&gt;requires&lt;/b&gt;:&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-7">
+          <mxGeometry y="206" width="260" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-12" value="&lt;b&gt;Notes&lt;/b&gt;:" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-7">
+          <mxGeometry y="232" width="260" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-13" value="gdm.require" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="170" y="330" width="210" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-14" value="&lt;b&gt;input&lt;/b&gt;: flags + require args&lt;br&gt;Note: require args are:&amp;lt;vendor&amp;gt;/&amp;lt;repo&amp;gt;#&amp;lt;rev&amp;gt; [&amp;lt;LocationOpt&amp;gt;=&amp;lt;path|name&amp;gt;] [setup=&amp;lt;exec&amp;gt;]" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-13">
+          <mxGeometry y="26" width="210" height="74" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-15" value="&lt;b&gt;side effects&lt;/b&gt;:" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-13">
+          <mxGeometry y="100" width="210" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-16" value="&lt;b&gt;output&lt;/b&gt;:&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-13">
+          <mxGeometry y="126" width="210" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-17" value="&lt;b&gt;requires&lt;/b&gt;:" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-13">
+          <mxGeometry y="186" width="210" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-18" value="&lt;b&gt;Notes&lt;/b&gt;:&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-13">
+          <mxGeometry y="212" width="210" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-19" value="gdm.register" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="450" y="178" width="240" height="272" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-20" value="&lt;b&gt;input&lt;/b&gt;: $flags + $require_args&lt;br&gt;flags: --allow-lone | --disallow-lone&lt;br&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp;--force[-re-register]&amp;nbsp; --dry-run" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-19">
+          <mxGeometry y="26" width="240" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-21" value="&lt;b&gt;output&lt;/b&gt;: $requirement (assignments output from gdm_parseRequirement) +&amp;nbsp;register_created" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-19">
+          <mxGeometry y="90" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-23" value="&lt;b&gt;side effects&lt;/b&gt;: clones (and runs setup) to registry&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-19">
+          <mxGeometry y="150" width="240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-24" value="&lt;b&gt;requires&lt;/b&gt;:" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-19">
+          <mxGeometry y="190" width="240" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-25" value="&lt;b&gt;Notes&lt;/b&gt;:&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="AZiJ76leZRMekGIFPpnd-19">
+          <mxGeometry y="216" width="240" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="AZiJ76leZRMekGIFPpnd-20" target="AZiJ76leZRMekGIFPpnd-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="AZiJ76leZRMekGIFPpnd-14" target="AZiJ76leZRMekGIFPpnd-20">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-28" value="$@" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="AZiJ76leZRMekGIFPpnd-27">
+          <mxGeometry x="-0.6507" y="-7" relative="1" as="geometry">
+            <mxPoint x="-7" y="-72" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-29" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.149;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="AZiJ76leZRMekGIFPpnd-17" target="AZiJ76leZRMekGIFPpnd-8">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="539" />
+              <mxPoint x="700" y="580" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-30" value="$lone_allow $destin_manifest $destin_instance $regis_snapshot &lt;br&gt;&quot;$assignments_of_GDM_MANIF_VALIDATABLES&quot; &lt;br&gt;$GDM_MANIF_VALIDATABLES" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;" vertex="1" connectable="0" parent="AZiJ76leZRMekGIFPpnd-29">
+          <mxGeometry x="-0.5193" relative="1" as="geometry">
+            <mxPoint x="61" y="-7" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.043;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.998;exitY=0.677;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="AZiJ76leZRMekGIFPpnd-69" target="AZiJ76leZRMekGIFPpnd-8">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1000" y="260" as="sourcePoint" />
+            <Array as="points">
+              <mxPoint x="1050" y="500" />
+              <mxPoint x="750" y="500" />
+              <mxPoint x="750" y="570" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-60" value="$lone_allow $regis_manifest $regis_instance $regis_snapshot &lt;br&gt;&quot;$manif_valid_assigns&quot;&amp;nbsp;$GDM_MANIF_VALIDATABLES" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;" vertex="1" connectable="0" parent="AZiJ76leZRMekGIFPpnd-31">
+          <mxGeometry x="0.1505" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="AZiJ76leZRMekGIFPpnd-18" target="AZiJ76leZRMekGIFPpnd-8">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="650" y="580" />
+              <mxPoint x="650" y="613" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-33" value="&lt;span style=&quot;&quot;&gt;&quot;$assignments_of_GDM_MANIF_VALIDATABLES&quot;&lt;/span&gt;&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;regis_instance remote_url hash tag setup" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;" vertex="1" connectable="0" parent="AZiJ76leZRMekGIFPpnd-32">
+          <mxGeometry x="-0.5577" y="2" relative="1" as="geometry">
+            <mxPoint x="61" y="2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-34" value="&lt;font style=&quot;font-size: 42px;&quot;&gt;OLD&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="-660" y="10" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="AZiJ76leZRMekGIFPpnd-38" value="&lt;font style=&quot;font-size: 42px;&quot;&gt;NEW&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="420" y="10" width="60" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

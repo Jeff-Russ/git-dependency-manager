@@ -139,7 +139,7 @@ gdm_echoVars() {
   #    "$arg\n"              # to output comments direct assignments of variable to some other value
   # gdm_echoVars accepts the following option applying to all subsequent arguments:
   #    --local
-  #    --local=true   # prepends 'local ' for scalars, arrays, assignments (that lack them), and sets <flags> to -A for hashes
+  #    --local=true   # prepends 'local ' for scalars, arrays, and sets <flags> to -A for hashes no effect on assignments
   #    --local=false  # resets to default (no prepending, <flags> as detected for hashes)
   #    --append-array
   #    --append-array=true   # assign arrays with +=( Note: this will force --local to false for arrays
@@ -149,29 +149,33 @@ gdm_echoVars() {
   #    --suffix=" ; "       # This would output inline assignments (does not apply to comments which always have newline)
   #    --suffix=" "         # BEWARE: these would eval to an error but it suitable for parameterizing and forwarding to commands
 
-
-  local declare_local=false
   local append_array=false
   local append_hash=false
   local decl=""
   local suffix=" ; \n"
   
-  for arg in $@ ; do
+  local argnum=0
+  for arg in $@ ; do ((argnum++))
+    if ((argnum==$#)) && [[ "$suffix[-2]" == '\' ]] && [[ "$suffix[-1]" == "n" ]] ; then suffix="$suffix[1,-3]" ; fi
     
     # options:
     if   [[ "$arg" =~ '^--local(=true)?$' ]] ; then decl="local " 
     elif [[ "$arg" == --local=false ]] ;       then previx=""
-
-    elif [[ "$arg" =~ '^--append-array(=true)?$' ]] ; then append_array=true # overrides declare_local
+    elif [[ "$arg" =~ '^--append-array(=true)?$' ]] ; then append_array=true # overrides --local
     elif [[ "$arg" == --append-array=false ]] ;       then append_array=false
-
-    elif [[ "$arg" =~ '^--append-hash(=true)?$' ]] ; then append_hash=true # overrides declare_local
+    elif [[ "$arg" =~ '^--append-hash(=true)?$' ]] ; then append_hash=true # overrides --local
     elif [[ "$arg" == --append-hash=false ]] ;       then append_hash=false
-    
     elif [[ "$arg" =~ '^--suffix=.+$' ]] ; then suffix="${arg#*=}" 
 
+    # custom bypasses:
+    elif [[ "$arg" =~ '^[ ]*#' ]] ; then  echo "$arg" # echo comment with newline
+
+    elif [[ "$arg" =~ '^[a-zA-Z_]+[a-zA-Z0-9_]*([+])?=' ]] ; then echo "$arg$suffix" # custom variable name with assignment
+    #TODO: or this?
+    # elif [[ "$arg" =~ '^[a-zA-Z_]+[a-zA-Z0-9_]*([+])?=' ]] ; then echo "$arg" # custom variable name with assignment
+
     # arg is a variable name so echo it according to options
-    elif [[ -n "${(P)arg+set}" ]] ; then 
+    elif [[ -n "${(P)arg+set}" ]] ; then  
       local name="$arg"
 
       if [[ "$(gdm_typeof $name)" =~ 'array' ]] ; then
@@ -180,14 +184,18 @@ gdm_echoVars() {
         fi
       
       elif [[ "$(gdm_typeof $name)" =~ 'association' ]] ; then
-        if $append_hash ; then
-          print -n -- "$name+=$(gdm_mapVal $name) ; "
+        if $append_hash ; then print -n -- "$name+=$(gdm_mapVal $name) ; "
         elif [[ -z "$decl" ]] ; then print -n -- "$(typeset -p $name)$suffix"
         else print -n -- "declare -A $name=$(gdm_mapVal $name)$suffix"
         fi
 
       else print -n -- "$decl${name}=\"${(P)name}\"$suffix"
-    fi
+      fi
+
+    # Another custom bypass
+    elif [[ "$arg" =~ '^[a-zA-Z_]+[a-zA-Z0-9_]$' ]] ; then echo "$decl$arg=\"\"$suffix"  # just an (unset) variable name
+
+    else echo "Warning: $0 was passed something it does not recognize:\"$arg\"" >&2 # perhaps a bad idea
     fi
   done
 }
