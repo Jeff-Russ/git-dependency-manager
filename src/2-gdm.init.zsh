@@ -1,6 +1,4 @@
 
-# export _GDM_TESTMODE="${GDM_TESTMODE:=false}"
-
 export GDM_CALL_EVAL_CONTEXT="$ZSH_EVAL_CONTEXT" 
 export GDM_CALL_FFTRACE=("${funcfiletrace[@]}") 
 export GDM_CALLER_WD="$PWD"
@@ -10,6 +8,7 @@ export PROJ_CALL_STATUS=""
 export PROJ_ROOT=""
 export PROJ_CONFIG_FILE=""
 export PROJ_CONFIG_WAS=""
+
 # (The function body is the lines between the lines specified below)
 export PROJ_CONFIG_STARTLINE=""  # starting line number for export config in scanned PROJ_CONFIG_FILE
 export PROJ_CONFIG_ENDLINE=""    #   ending line number for exported config array in scanned PROJ_CONFIG_FILE
@@ -19,29 +18,28 @@ export PROJ_CONFIG_ARRAY=()
 export PROJ_LOCK_ARRAY=()
 export PROJ_CONFIG_IDX=0 # should be incremented as index of both PROJ_CONFIG_ARRAY and PROJ_LOCK_ARRAY (at once)
 
-
 gdm.init() {
   # gdm.init initializes a new project by creating GDM_REQUIRE_CONF if it is not found (always at WD)
   #             if --traverse-parents is not provided) and, if project is found, validates the GDM_REQUIRE_CONF
   #             If GDM_REQUIRE_CONF is valid this function runs gdm_exportFromProjVars 
   # IMPORTANT: do not execute gdm.init in a subshell as would be the case when capturing output. Exports would fail!
   # (for additional details, see commments for gdm.locateProject)
-  gdm_loadProj --init $@ #-> gdm.init calls gdm_loadProj
+  gdm_loadProject --init $@ #-> gdm.init calls gdm_loadProject
   return $?
 }
 
-
-gdm_loadProj() {
-  # gdm_loadProj is a 'private' function that forms the core of gdm.init when gdm_loadProj is called with --init
-  #          Whether called with --init or not, if gdm_loadProj successfully finds a valid project, 
+# 71 lines:
+gdm_loadProject() {
+  # gdm_loadProject is a 'private' function that forms the core of gdm.init when gdm_loadProject is called with --init
+  #          Whether called with --init or not, if gdm_loadProject successfully finds a valid project, 
   #          establishes the caller project details by assigning exported variables pertaining to it
   #          by calling gdm_exportFromProjVars (see gdm_exportFromProjVars  for details).
-  #          When --init is passed (as 1st arg only) to gdm_loadProj, as is done when called  by gdm.init,
+  #          When --init is passed (as 1st arg only) to gdm_loadProject, as is done when called  by gdm.init,
   #             it will initialize a  new project by creating GDM_REQUIRE_CONF if it is not found (always at WD 
   #             if --traverse-parents is not provided) 
   #           But can  also be called elsewhere without --init to skip creating of a new GDM_REQUIRE_CONF
   #             and just perform the part that establishes the caller project details via calling gdm_exportFromProjVars
-  # IMPORTANT: do not execute gdm_loadProj in a subshell as would be the case when capturing output. Exports would fail!
+  # IMPORTANT: do not execute gdm_loadProject in a subshell as would be the case when capturing output. Exports would fail!
   # (for additional details, see commments for gdm.locateProject)
   local assignments call_err eval_err 
 
@@ -55,7 +53,7 @@ gdm_loadProj() {
   # else
   #   assigments="$(gdm.locateProject $@)" ; call_err=$?
   # fi
-  assigments="$(gdm.locateProject $@)" ; call_err=$? #-> gdm_loadProj calls gdm.locateProject
+  assigments="$(gdm.locateProject $@)" ; call_err=$? #-> gdm_loadProject calls gdm.locateProject
   # NOTE: locateProject will return $GDM_ERRORS[no_project_found] if "$config_was"=='missing' 
   # all locals below are set in or appended in assigments:
   local call_status config_was proj_root proj_conf 
@@ -86,10 +84,37 @@ gdm_loadProj() {
   fi
   echo "gdm_exportFromProjVars assigments=\n$assigments" #TEST
 
+  # set (exported) archive of archive of local var assignments used to assign each other PROJ_* var
   GDM_PROJ_VARS="$(gdm_echoVars --local --append-array call_status proj_root proj_conf config_was config_startline config_endline lock_startline lock_endline errors)"
 
-  gdm_exportFromProjVars "$assigments" || return $? #-> gdm_loadProj calls gdm_exportFromProjVars
+  gdm_exportFromProjVars() {
+    local  eval_err 
+    assigments="$1"
+    local proj_root proj_conf config_startline config_endline lock_startline lock_endline # from assigments
+        # 'call_status' proj_root proj_conf 'config_was' config_startline config_endline lock_startline lock_endline 
+    eval "$GDM_PROJ_VARS" ; eval_err=$?
+    if ((eval_err)) ; then
+      echo "Unexpected Error in gdm_exportFromProjVars: eval of assigments resulted in error code $eval_err"
+      return 1
+    fi
+
+    PROJ_CALL_STATUS="$call_status"
+    PROJ_ROOT="$proj_root"
+    PROJ_CONFIG_FILE="$proj_conf"
+    PROJ_CONFIG_WAS="$config_was"
+    PROJ_CONFIG_STARTLINE=$config_startline
+    PROJ_CONFIG_ENDLINE=$config_endline
+    PROJ_LOCK_STARTLINE=$lock_startline
+    PROJ_LOCK_ENDLINE=$lock_endline 
+    shift $# # clear to prevent sourcing from forwarding arguments
+    source "$PROJ_CONFIG_FILE"
+    PROJ_CONFIG_ARRAY=("${config[@]}")
+    PROJ_LOCK_ARRAY=("${config_lock[@]}")
+  }
+
+  gdm_exportFromProjVars "$assigments" || return $? #-> gdm_loadProject calls gdm_exportFromProjVars
   # call_err=$? ; ((call_err)) && return $?
+
   
   if  [[ "$config_was" == 'missing' ]] ; then 
     # this can only happen if called without --init, which would be caught above. So this block is unreachable
@@ -104,11 +129,10 @@ gdm_loadProj() {
   return 0
 }
 
-
+# 25 lines
 gdm_exportFromProjVars() {
   local  eval_err 
   assigments="$1"
-  echo "$0 got:\n$assigments\nEND $0 got" # $TEST
   local proj_root proj_conf config_startline config_endline lock_startline lock_endline # from assigments
       # 'call_status' proj_root proj_conf 'config_was' config_startline config_endline lock_startline lock_endline 
   eval "$GDM_PROJ_VARS" ; eval_err=$?
@@ -131,13 +155,7 @@ gdm_exportFromProjVars() {
   PROJ_LOCK_ARRAY=("${config_lock[@]}")
 }
 
-# for debugging:
-gdm_echoProjVars() {
-  typeset -m 'GDM_CALL*'
-  typeset -m 'PROJ*'
-}
-
-
+# 212
 gdm.locateProject() { 
   # gdm.locateProject looks for a project based on how GDM was executed and, 
   #                   if PROJ_CONFIG_FILE if not found and --init is passed, creates it.
@@ -278,7 +296,7 @@ gdm.locateProject() {
   ##### ENFORCE VALID GDM_REQUIRED VALUE ##########################################################
   if  ! (($GDM_EXPERIMENTAL[(Ie)any_required_path])) ; then # If experimental mode disabled....
     # ERROR IF GDM_REQUIRED IS NOT WITHIN proj_root
-    local reqdir_relto_proj="$(gdm_dirA_relto_B $PROJ_ROOT/$GDM_REQUIRED $proj_root GDM_REQUIRED PROJ_ROOT)" 
+    local reqdir_relto_proj="$(gdm_dirA_relto_B $proj_root/$GDM_REQUIRED $proj_root GDM_REQUIRED PROJ_ROOT)" 
     # possible values:  *" is contained by "*   *" contains "*   *" is "*   *" has no relation to "*  (first * is GDM_REQUIRED) 
     if [[ "$reqdir_relto_proj" != "GDM_REQUIRED is contained by PROJ_ROOT" ]] ; then 
       conf_was="" # remove default value "unexpected error" as we are returning before having properly set conf_was
@@ -352,6 +370,7 @@ gdm.locateProject() {
   fi
 }
 
+# 78 lines
 gdm.validateConf() {
   # gdm.validateConf checks proj_conf ($1) by sourcing it and checking if it does the following:
   #            export arrays: config config_lock ; export the variables: GDM GDM_VER.
@@ -432,6 +451,7 @@ gdm.validateConf() {
   fi
 }
 
+# 98 lines
 gdm.locateConfSections() {
   # gdm.locateConfSections finds the line numbers where the config and config_lock arrays are exported a project config
   #             file as well as verify that they, along with sourcing GDM, are done properly and in the correct order.
@@ -532,10 +552,11 @@ gdm.locateConfSections() {
 
 }
 
-
-
-gdm_assembleConfSection() {
-  # local assembled_conf=( "$PROJ_CONFIG_A[@]" "$PROJ_CONFIG_B[@]" "$PROJ_CONFIG_C[@]" "$PROJ_CONFIG_D[@]" "$PROJ_CONFIG_E[@]")
-  # print -l "$assembled_conf[@]" 
+# for debugging:
+gdm_echoProjVars() {
+  typeset -m 'GDM_CALL*'
+  typeset -m 'PROJ*'
 }
+
+
 
