@@ -140,8 +140,6 @@ gdm_parseRequirement() {
     regis_suffix="_setup-$setup_hash"
   fi
 
-  
-
   local regis_parent_dir="$GDM_REGISTRY/${${remote_url#*//}:r}" # set to $GDM_REGISTRY/domain/vendor/repo
   local regis_prefix="$tag" ; [[ -z "$regis_prefix" ]] && regis_prefix=$hash[1,$GDM_MIN_HASH_LEN] 
   # NOTE: when regis_prefix is a hash, it is an estimate that may need elongation (done later in this function)

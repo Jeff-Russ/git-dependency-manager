@@ -21,19 +21,19 @@ export PROJ_CONFIG_IDX=0 # should be incremented as index of both PROJ_CONFIG_AR
 
 
 gdm.init() {
-  # gdm.init initializes a new project by creating GDM_REQUIRE_CONF if it is not found (always at WD 
+  # gdm.init initializes a new project by creating GDM_REQUIRE_CONF if it is not found (always at WD)
   #             if --traverse-parents is not provided) and, if project is found, validates the GDM_REQUIRE_CONF
   #             If GDM_REQUIRE_CONF is valid this function runs gdm_exportFromProjVars 
   # IMPORTANT: do not execute gdm.init in a subshell as would be the case when capturing output. Exports would fail!
   # (for additional details, see commments for gdm.locateProject)
-  gdm_loadProj --init $@
+  gdm_loadProj --init $@ #-> gdm.init calls gdm_loadProj
   return $?
 }
 
 
 gdm_loadProj() {
-  # gdm_loadProj is a 'private' function that forms the core of gdm.init when called with --init
-  #          Whether called with --init, if gdm_loadProj successfully finds a valid project, 
+  # gdm_loadProj is a 'private' function that forms the core of gdm.init when gdm_loadProj is called with --init
+  #          Whether called with --init or not, if gdm_loadProj successfully finds a valid project, 
   #          establishes the caller project details by assigning exported variables pertaining to it
   #          by calling gdm_exportFromProjVars (see gdm_exportFromProjVars  for details).
   #          When --init is passed (as 1st arg only) to gdm_loadProj, as is done when called  by gdm.init,
@@ -48,16 +48,18 @@ gdm_loadProj() {
   echo "$(_S M)$0$(_S)" #TEST
   # echo "$(_S G)HERE$(_S)" #TEST
 
-  if [[ "$1" == --init ]] ; then
-    shift
-    assigments="$(gdm.locateProject --init $@)" ; call_err=$? # locateProject will return $GDM_ERRORS[no_project_found] if "$config_was"=='missing' 
-  else
-    assigments="$(gdm.locateProject $@)" ; call_err=$?
-  fi
-
-
-  local call_status config_was proj_root proj_conf # all set in assigments
-  local errors=() ; local config_startline config_endline lock_startline lock_endline  # more set in assigments
+  #TODO: delete this... why not just pass $@? is there any use of $@ after shift???
+  # if [[ "$1" == --init ]] ; then
+  #   shift
+  #   assigments="$(gdm.locateProject --init $@)" ; call_err=$? # locateProject will return $GDM_ERRORS[no_project_found] if "$config_was"=='missing' 
+  # else
+  #   assigments="$(gdm.locateProject $@)" ; call_err=$?
+  # fi
+  assigments="$(gdm.locateProject $@)" ; call_err=$? #-> gdm_loadProj calls gdm.locateProject
+  # NOTE: locateProject will return $GDM_ERRORS[no_project_found] if "$config_was"=='missing' 
+  # all locals below are set in or appended in assigments:
+  local call_status config_was proj_root proj_conf 
+  local errors=() ; local config_startline config_endline lock_startline lock_endline 
   eval "$assigments" ; eval_err=$?
 
   if ((eval_err)) ; then
@@ -86,7 +88,7 @@ gdm_loadProj() {
 
   GDM_PROJ_VARS="$(gdm_echoVars --local --append-array call_status proj_root proj_conf config_was config_startline config_endline lock_startline lock_endline errors)"
 
-  gdm_exportFromProjVars || return $?
+  gdm_exportFromProjVars "$assigments" || return $? #-> gdm_loadProj calls gdm_exportFromProjVars
   # call_err=$? ; ((call_err)) && return $?
   
   if  [[ "$config_was" == 'missing' ]] ; then 
@@ -148,9 +150,11 @@ gdm.locateProject() {
   #                                e) exporting config config_lock as well as sourcing GDM are not done properly or in the correct order.
   #            2) $config_was=="unknown error" (unlikely, possibly impossible)
   #          If a PROJ_CONFIG_FILE is found and is valid, it parses the file, assigning exported variables (see 'side effects').
-  # Prerequisites:
-  #           GDM_REQUIRE_CONF, GDM_CALLER_WD, GDM_CALL_EVAL_CONTEXT, and GDM_CALL_FFTRACE must be exported with valid values and 
-  #           PROJ_ROOT, GDM_PROJ_REQUIRE_LINES, GDM_PROJ_LOCK_LINES must be exported (the latter two as empty arrays)
+  # Prerequisites (below doesn't list exports always required):
+  #      must be exported with valid values:
+  #           GDM_REQUIRE_CONF, GDM_CALLER_WD. GDM_CALL_EVAL_CONTEXT, GDM_CALL_FFTRACE
+  #      must be exported (the last two as empty arrays):
+  #           PROJ_ROOT, GDM_PROJ_REQUIRE_LINES, GDM_PROJ_LOCK_LINES 
   # Input (all optional and non-positional)
   #       --init              # if PROJ_CONFIG_FILE is missing, create it.
   #       --traverse-parents  # Unless provided and not called by GDM_CALLER_WD or executed with GDM_CALLER_WD 
@@ -160,7 +164,7 @@ gdm.locateProject() {
   #       --validate-script   # fail if GDM is is not equal to $GDM_SCRIPT 
   #                           # (requires that GDM_SCRIPT be exported by/assiged to this script's "$0" prior to calling)
   # Output: (all stdout) of eval-able assigments of (appending to in the case of the errors array) the following:
-  #    Always Output:
+  #    Always Output: 
   #       call_status="$how by conf"|"$how with conf found in stack"|"$how from shell without project"|"$how from shell at project $where"
   #                 WHERE: how=sourced|executed and where=root|subdir
   #       config_was=created|valid|invalid|"unexpected error"
@@ -185,12 +189,13 @@ gdm.locateProject() {
   #                    "config array was not properly exported in \"$conf_file\""
   #                    "config_lock array was not properly exported in \"$conf_file\""
   #                    "GDM is not properly sourced in \"$conf_file\""
+  #                    "GDM_REQUIRED exported directory \"$GDM_REQUIRED\" is not contained within the project root: $PROJ_ROOT"
   #              Possible errors (returning 1):
   #                    "Unexpected Error in gdm.locateProject: unknown call_status"
   #                    "Unexpected Error in gdm.locateProject: eval of gdm.validateConf output resulted in error code $eval_err"
   #                    "Unexpected Error in gdm.locateProject: eval of gdm.locateConfSections output resulted in error code $eval_err"
   #                    "Unexpected argument to gdm.validateConf: $arg"
-  #    Sometimes Output (always if non-failing):
+  #    Sometimes Output (always if non-failing): 
   #         config_startline            # line where config array is exported
   #         config_endline              # line where config array is closed
   #         lock_startline              # line where exported config_lock array is declared
@@ -205,24 +210,22 @@ gdm.locateProject() {
   #           PROJ_CONFIG_ENDLINE=$config_endline
   #           PROJ_LOCK_STARTLINE=$lock_startline
   #           PROJ_LOCK_ENDLINE=$lock_endline
-  #       (OLD VERSION TODO: delete)
-  #           GDM_PROJ_REQUIRE_LINES+=("${config_start_end_lines[@]}")
-  #           GDM_PROJ_LOCK_LINES+=("${lock_start_end_lines[@]}")
   # return: $GDM_ERRORS[malformed_config_file] if $config_was==invalid ; 1 if $config_was=="unknown error" ; else 0
 
   # local validate_version=false
   # local validate_script=false
 
   local errors=() # will accumulate errors and be output
+
+  ##### PARSE FLAG ARGUMENTS ######################################################################
   local init=false
   local traverse_parents=false
   local gdm_validateConf_flags=()
-
   for arg in $@ ; do 
     if   [[ "$arg" ==  --init ]] ; then init=true
     elif [[ "$arg" ==  --traverse-parents ]] ; then traverse_parents=true
     elif [[ "$arg" ==  --validate-version ]] ; then gdm_validateConf_flags+=("$arg")
-    elif [[ "$arg" ==  --validate-sript ]] ;   then gdm_validateConf_flags+=("$arg")
+    elif [[ "$arg" ==  --validate-script ]] ;  then gdm_validateConf_flags+=("$arg")
     else 
       errors+=("Unexpected argument to gdm.validateConf: $arg") 
       gdm_echoVars --append-array errors
@@ -231,15 +234,13 @@ gdm.locateProject() {
   done
   shift $# # clear to prevent sourcing from forwarding arguments
 
-
+  ##### FIND proj_root proj_conf BY DETERMINING call_status  ######################################
   local sourced=false ; [[ "$GDM_CALL_EVAL_CONTEXT" == *':file' ]] && sourced=true
-
   local call_status="$($sourced && echo sourced || echo executed)" 
   local config_was="unexpected error" 
   local proj_conf=""
   local conf_call_line="" # currently unsused
   local proj_root=""
-  
   for i in {1..$#GDM_CALL_FFTRACE} ; do
     if [[ "$GDM_CALL_FFTRACE[$i]" =~ "/$GDM_REQUIRE_CONF:[0-9]+$" ]] ; then
       proj_conf="${${GDM_CALL_FFTRACE[$i]%:*}:a}" 
@@ -252,18 +253,15 @@ gdm.locateProject() {
       break
     fi
   done
-  
   if [[ -z "$proj_root" ]] ; then # Otherwise, deduce it by looking for conf...
     proj_root="$GDM_CALLER_WD" 
     if [[ -f "$proj_root/$GDM_REQUIRE_CONF" ]] ; then # ...in directly in $PWD ...
       proj_conf="$proj_root/$GDM_REQUIRE_CONF" 
       call_status="$call_status from shell at project root"
-
     elif $traverse_parents  ; then # ...look in $PWD/.. then $PWD/../.. etc.
     # else  # ...look in $PWD/.. then $PWD/../.. etc.
       proj_root="${proj_root:h}"
       while [[ "$proj_root" != / ]] && ! [[ -f "$proj_root/$GDM_REQUIRE_CONF" ]] ; do proj_root="${proj_root:h}" ;  done
-
       if [[ -f "$proj_root/$GDM_REQUIRE_CONF" ]] ; then 
         proj_conf="$proj_root/$GDM_REQUIRE_CONF"
         call_status="$call_status from shell at project subdir"
@@ -277,38 +275,44 @@ gdm.locateProject() {
     fi
   fi
 
+  ##### ENFORCE VALID GDM_REQUIRED VALUE ##########################################################
+  if  ! (($GDM_EXPERIMENTAL[(Ie)any_required_path])) ; then # If experimental mode disabled....
+    # ERROR IF GDM_REQUIRED IS NOT WITHIN proj_root
+    local reqdir_relto_proj="$(gdm_dirA_relto_B $PROJ_ROOT/$GDM_REQUIRED $proj_root GDM_REQUIRED PROJ_ROOT)" 
+    # possible values:  *" is contained by "*   *" contains "*   *" is "*   *" has no relation to "*  (first * is GDM_REQUIRED) 
+    if [[ "$reqdir_relto_proj" != "GDM_REQUIRED is contained by PROJ_ROOT" ]] ; then 
+      conf_was="" # remove default value "unexpected error" as we are returning before having properly set conf_was
+      errors+=("GDM_REQUIRED=$GDM_REQUIRED is not within PROJ_ROOT=$proj_root ($reqdir_relto_proj)")
+      gdm_echoVars --append-array call_status config_was proj_root proj_conf errors
+      return $GDM_ERRORS[invalid_GDM_REQUIRED_path]
+    fi
+  fi
+
+  ##### SET config_was AND ECHO ERROR AND RETURN IF CONF DIDN'T SOURCE GDM  #######################
   local conf_file="${proj_conf//$GDM_CALLER_WD/.}" # for displaying to user in errors
-  
   local ret_code=0
   if [[ "$call_status" == 'executed by conf' ]] || [[ "$call_status" == *' with conf found in stack' ]] ; then
     config_was=invalid 
     errors+=("GDM was not directly sourced by \"$conf_file\" (GDM was ${call_status//conf/\"$conf_file\"})")
     ret_code=$GDM_ERRORS[malformed_config_file]
-    
   elif [[ "$call_status" == *' from shell without project' ]] ; then
     config_was=missing # okay: not an error: 'missing' signals to $GDM init
-
   elif [[ "$call_status" == 'sourced by conf' ]] || [[ "$call_status" == *' from shell at project '* ]] ; then
     config_was=found # okay for now but could be invalid so next step would be to validate it
-
   else # This can't possibly happen but just in case...
     config_was="unexpected error"
     errors+=("Unexpected Error in gdm.locateProject: unknown call_status")
     ret_code=1 # generic error
   fi
-
   if ((ret_code!=0)) ; then
     gdm_echoVars --append-array call_status config_was proj_root proj_conf errors
     return $ret_code
   fi
-  
-
   local assignments call_err eval_err 
-
   if [[ "$config_was" == found ]] ; then
-    assignments="$(gdm.validateConf $proj_conf $gdm_validateConf_flags)" ; call_err=$? # only possible assigment is to append errors
+    assignments="$(gdm.validateConf $proj_conf $gdm_validateConf_flags)" ; call_err=$? #-> gdm.locateProject calls gdm.validateConf
+    # NOTE: only possible assigment is to append errors
     eval "$assignments" ; eval_err=$?
-    
     if ((eval_err)) ; then
       errors+="Unexpected Error in gdm.locateProject: eval of gdm.validateConf output resulted in error code $eval_err"
       gdm_echoVars --append-array call_status config_was proj_root proj_conf errors
@@ -320,7 +324,7 @@ gdm.locateProject() {
   elif [[ "$config_was" == missing ]] ; then
     if $init ; then
       config_was=created
-      echo "$(gdm_conf_template)" > "$proj_root/$GDM_REQUIRE_CONF" 
+      echo "$(gdm_conf_template)" > "$proj_root/$GDM_REQUIRE_CONF"  #-> gdm.locateProject calls gdm_conf_template
       chmod +x "$proj_root/$GDM_REQUIRE_CONF" 
       proj_conf="$proj_root/$GDM_REQUIRE_CONF" 
       source "$proj_conf"
@@ -330,10 +334,10 @@ gdm.locateProject() {
     fi
   fi
 
+  ##### RUN gdm.locateConfSections AND POSSIBLY ECHO ERRORS BEFORE RETURN #########################
   local config_startline config_endline lock_startline lock_endline
-  assignments="$(gdm.locateConfSections $proj_conf)" ; call_err=$?
+  assignments="$(gdm.locateConfSections $proj_conf)" ; call_err=$?  #-> gdm.locateProject calls gdm.locateConfSections
   eval "$assignments" ; eval_err=$?
-  
   if ((eval_err)) ; then
     errors+=("Unexpected Error in gdm.locateProject: eval of gdm.locateConfSections output resulted in error code $eval_err")
     gdm_echoVars --append-array call_status config_was proj_root proj_conf errors config_startline config_endline lock_startline lock_endline
@@ -379,7 +383,7 @@ gdm.validateConf() {
 
   for arg in $@ ; do 
     if   [[ "$arg" ==  --validate-version ]] ; then validate_version=true
-    elif [[ "$arg" ==  --validate-sript ]] ; then validate_script=true
+    elif [[ "$arg" ==  --validate-script ]] ; then validate_script=true
     else 
       errors+=("Unexpected argument to gdm.validateConf: $arg") 
       gdm_echoVars --append-array errors

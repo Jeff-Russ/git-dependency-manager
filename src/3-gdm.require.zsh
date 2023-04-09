@@ -92,7 +92,7 @@ gdm.require() {
 
   if ((prev_inst_error==instance_missing)) ; then # destin_instance is missing
     echo "$(_S D S E)Installing to \"${destin_instance//$PWD/.}\" from \"${regis_instance//$GDM_REGISTRY/\$GDM_REGISTRY}\"$(_S)"
-    gdm_echoAndExec "mkdir -p \"$destin_instance:h\"" || return $GDM_ERRORS[mkdir_$GDM_REQUIRED]
+    gdm_echoAndExec "mkdir -p \"$destin_instance:h\"" || return $GDM_ERRORS[mkdir_GDM_REQUIRED_failed]
     # cp -al "$regis_instance" "$destin_instance" >/dev/null 2>&1 || return $GDM_ERRORS[hardlink_failed] #OLD
     gdm_echoAndExec "cp -al \"$regis_instance\" \"$destin_instance\"" || return $GDM_ERRORS[hardlink_failed] #NEW
     echo "$(_S G)Installation complete.$(_S)" ; return 0

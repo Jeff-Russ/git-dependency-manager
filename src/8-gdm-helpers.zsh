@@ -1,3 +1,16 @@
+gdm_dirA_relto_B() { #( whether either exist or not) checks if 
+  # 'dirA contains B' OR 'dirA is contained by B' OR 'dirA is B' OR "dirA has no relation to B"
+  # Recomended if arg paths don't exist: pass args though absolute function first
+  local dirA B
+  local dirA='dirA' ; ! [[ -z "$3" ]] && dirA="$3"
+  local B='B'       ; ! [[ -z "$4" ]] && B="$4"
+  if [[ "${2:a}" == "${1:a}" ]] ; then echo "$dirA is $B"
+  elif [[ "${2:a}" == "${1:a}"* ]] ; then echo "$dirA contains $B"
+  elif [[ "${1:a}" == "${2:a}"* ]] ; then echo "$dirA is contained by $B"
+  else echo "$dirA has no relation to $B"
+  fi
+}
+
 gdm_mvSubdirsTo() {
   # Description
   #   Moves subdirectories with a given name at any depth within some directory to another, 

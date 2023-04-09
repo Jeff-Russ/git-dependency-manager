@@ -174,11 +174,11 @@ gdm_parseIfDesinationOption() {
       fi
       local target_relto_proj="$(gdm_dirA_relto_B $destin_instance $PROJ_ROOT t p)" 
       local target_relto_req="$(gdm_dirA_relto_B $destin_instance $PROJ_ROOT/$GDM_REQUIRED t r)"
-      if [[ "$target_relto_proj" == 't is p' ]] ; then # possible values:  "t contains p"  "t is contained by p"  "t is p"  "no relation" 
+      if [[ "$target_relto_proj" == 't is p' ]] ; then # possible values:  "t contains p"  "t is contained by p"  "t is p"  "t has no relation to p" 
         echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\" Value cannot be project root$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       elif [[ "$target_relto_proj" == 't is contained by p' ]] && [[ "${arg:l}" == 'to-fs-'* ]] ; then 
         echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\" Value cannot be within the project root$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
-      elif [[ "$target_relto_req" == 't is r' ]] ; then # possible values:  "t contains r"  "t is contained by r"  "t is r"  "no relation" 
+      elif [[ "$target_relto_req" == 't is r' ]] ; then # possible values:  "t contains r"  "t is contained by r"  "t is r"  "t has no relation to p" 
         echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\" Value cannot be project's $GDM_REQUIRED)$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       elif [[ "$target_relto_req" == 't is contained by r' ]] ; then 
         echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\" Value cannot be within project's $GDM_REQUIRED)$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
@@ -232,21 +232,6 @@ gdm_pathNotation() {
   else echo 'empty'
   fi
 }
-
-
-gdm_dirA_relto_B () { #( whether either exist or not) checks if 
-  # 'dirA contains B' OR 'dirA is contained by B' OR 'dirA is B' OR "no relation"
-  # Recomended if arg paths don't exist: pass args though absolute function first
-  local dirA B
-  local dirA='dirA' ; ! [[ -z "$3" ]] && dirA="$3"
-  local B='B'       ; ! [[ -z "$4" ]] && B="$4"
-  if [[ "${2:a}" == "${1:a}" ]] ; then echo "$dirA is $B"
-  elif [[ "${2:a}" == "${1:a}"* ]] ; then echo "$dirA contains $B"
-  elif [[ "${1:a}" == "${2:a}"* ]] ; then echo "$dirA is contained by $B"
-  else echo "no relation"
-  fi
-}
-
 
 gdm_multiArgError() { echo "$(_S R S)$1 has multiple $2 specified! $(_S)" >&2 ; return $GDM_ERRORS[invalid_argument] ; }
 

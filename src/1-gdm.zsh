@@ -86,10 +86,11 @@ declare -Ag GDM_ERRORS=(
   [snapshot_postswap_failed]=41
 
   # gdm.require errors
-  [malformed_config_file]=61
-  [cannot_find_proj_root]=62
-  [nested_proj_not_called_from_root]=63
-  [mkdir_$GDM_REQUIRED]=65
+  [invalid_GDM_REQUIRED_path]=61
+  [malformed_config_file]=62
+  [cannot_find_proj_root]=63
+  [nested_proj_not_called_from_root]=64
+  [mkdir_GDM_REQUIRED_failed]=65
   [hardlink_failed]=66
   [no_project_found]=67
 
@@ -99,7 +100,9 @@ declare -Ag GDM_ERRORS=(
 
 gdm.error() { echo "${(k)GDM_ERRORS[(r)$1]}" ; } # reverse lookup return error codes (GDM_ERRORS)
 
-# currently accepted GDM_EXPERIMENTAL element values: destination_paths
+# currently accepted GDM_EXPERIMENTAL element values: (NOTE: ALL ARE VERY DANGEROUS TO FILESYSTEM)
+# destination_paths     (allow require installation destinations outside of project's GDM_REQUIRED dir)
+# any_required_path     (allow project's GDM_REQUIRED dir to be in any location)
 if [[ "$(gdm_typeof GDM_EXPERIMENTAL)" =~ 'array' ]] ; then
     export GDM_EXPERIMENTAL # user has provided so just export to be safe
 else export GDM_EXPERIMENTAL=() # add experiemental modes to always enable if use did not specify
