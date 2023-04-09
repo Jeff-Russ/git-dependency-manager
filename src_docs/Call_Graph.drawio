@@ -1,6 +1,6 @@
-<mxfile host="Electron" modified="2023-04-09T19:33:39.221Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.1.2 Chrome/106.0.5249.199 Electron/21.4.3 Safari/537.36" etag="sHeQ3_Wz5PFeXtUS0U0C" version="21.1.2" type="device">
+<mxfile host="Electron" modified="2023-04-09T21:38:03.773Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.1.2 Chrome/106.0.5249.199 Electron/21.4.3 Safari/537.36" etag="gZ36NtDIK1_BvucJk4Fc" version="21.1.2" type="device">
   <diagram name="Page-1" id="5d7acffa-a066-3a61-03fe-96351882024d">
-    <mxGraphModel dx="2443" dy="979" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="#ffffff" math="0" shadow="0">
+    <mxGraphModel dx="2353" dy="913" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="#ffffff" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -160,43 +160,29 @@
         <mxCell id="VWj8lnTXbPIEUd7eUML7-32" value="&lt;b&gt;Notes&lt;/b&gt;: Beside --init, $@ are additional flag accepted by&amp;nbsp;gdm.locateProject&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-1">
           <mxGeometry y="150" width="160" height="56" as="geometry" />
         </mxCell>
-        <mxCell id="VWj8lnTXbPIEUd7eUML7-73" value="&lt;b&gt;side effects&lt;/b&gt;: see&amp;nbsp;gdm_loadProj" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-1">
+        <mxCell id="VWj8lnTXbPIEUd7eUML7-73" value="&lt;b&gt;side effects&lt;/b&gt;: see&amp;nbsp;gdm.loadProject" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-1">
           <mxGeometry y="206" width="160" height="40" as="geometry" />
         </mxCell>
         <mxCell id="VWj8lnTXbPIEUd7eUML7-77" value="&lt;b&gt;Notes&lt;/b&gt;: &lt;span style=&quot;background-color: rgb(255, 204, 204);&quot;&gt;DO NOT EXECUTE IN SUBSHELL&lt;/span&gt; as this would prevent env vars from exporting properly" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-1">
           <mxGeometry y="246" width="160" height="64" as="geometry" />
         </mxCell>
-        <mxCell id="VWj8lnTXbPIEUd7eUML7-10" value="gdm_loadProj" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" vertex="1" parent="1">
-          <mxGeometry x="-660" y="232" width="210" height="526" as="geometry" />
+        <mxCell id="VWj8lnTXbPIEUd7eUML7-10" value="gdm.loadProject" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="-660" y="232" width="220" height="478" as="geometry" />
         </mxCell>
         <mxCell id="VWj8lnTXbPIEUd7eUML7-11" value="&lt;b&gt;input&lt;/b&gt;:&amp;nbsp;&lt;br&gt;Note:&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-10">
-          <mxGeometry y="26" width="210" height="64" as="geometry" />
+          <mxGeometry y="26" width="220" height="64" as="geometry" />
         </mxCell>
         <mxCell id="VWj8lnTXbPIEUd7eUML7-13" value="&lt;b&gt;output&lt;/b&gt;: informational only" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-10">
-          <mxGeometry y="90" width="210" height="20" as="geometry" />
+          <mxGeometry y="90" width="220" height="20" as="geometry" />
         </mxCell>
         <mxCell id="VWj8lnTXbPIEUd7eUML7-69" value="&lt;font face=&quot;Courier New&quot; style=&quot;font-size: 9px;&quot;&gt;assigments=&quot;$(gdm.locateProject $@)&quot;&amp;nbsp;&lt;/font&gt;" style="text;html=1;strokeColor=default;fillColor=#E3E6F2;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;dashed=1;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-10">
-          <mxGeometry y="110" width="210" height="30" as="geometry" />
+          <mxGeometry y="110" width="220" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="VWj8lnTXbPIEUd7eUML7-50" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;gdm_exportFromProjVars&lt;/font&gt;" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#F2F2F2;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=default;align=center;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12;glass=0;swimlaneLine=0;strokeColor=default;dashed=1;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-10">
-          <mxGeometry y="140" width="210" height="240" as="geometry">
-            <mxRectangle y="160" width="210" height="30" as="alternateBounds" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="VWj8lnTXbPIEUd7eUML7-51" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;&lt;i&gt;input&lt;/i&gt;&lt;/span&gt;: &lt;font face=&quot;Courier New&quot;&gt;assignments&lt;/font&gt; from&amp;nbsp;gdm.locateProject" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-50">
-          <mxGeometry y="26" width="210" height="44" as="geometry" />
-        </mxCell>
-        <mxCell id="VWj8lnTXbPIEUd7eUML7-52" value="&lt;i&gt;output&lt;/i&gt;:&lt;font style=&quot;&quot;&gt;&amp;nbsp;none&lt;span style=&quot;font-size: 10px;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/font&gt;&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-50">
-          <mxGeometry y="70" width="210" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="VWj8lnTXbPIEUd7eUML7-55" value="&lt;b&gt;side effects&lt;/b&gt;: exports:&amp;nbsp;&lt;br&gt;PROJ_CALL_STATUS PROJ_ROOT PROJ_CONFIG_FILE PROJ_CONFIG_WAS PROJ_CONFIG_STARTLINE PROJ_CONFIG_ENDLINE PROJ_LOCK_STARTLINE PROJ_LOCK_ENDLINE PROJ_CONFIG_ARRAY PROJ_LOCK_ARRAY" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-50">
-          <mxGeometry y="90" width="210" height="150" as="geometry" />
-        </mxCell>
-        <mxCell id="VWj8lnTXbPIEUd7eUML7-12" value="&lt;b&gt;side effects&lt;/b&gt;:&amp;nbsp;if missing, creates &lt;font style=&quot;font-size: 9px;&quot;&gt;GDM_REQUIRE_CONF&lt;/font&gt; file (see gdm.locateProject), and performs exports (see gdm_exportFromProjVars)" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-10">
-          <mxGeometry y="380" width="210" height="90" as="geometry" />
+        <mxCell id="VWj8lnTXbPIEUd7eUML7-12" value="&lt;b&gt;side effects&lt;/b&gt;:,&lt;b style=&quot;border-color: var(--border-color);&quot;&gt;side effects&lt;/b&gt;:&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;creates,&amp;nbsp;if missing and --init,&amp;nbsp;&lt;br&gt;GDM_REQUIRE_CONF&amp;nbsp;file (via gdm.locateProject)&lt;br&gt;&lt;br&gt;exports&amp;nbsp;&lt;font style=&quot;font-size: 10px;&quot;&gt;GDM_PROJ_VARS for debugging&lt;/font&gt;&lt;br&gt;&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;If valid project is found/created, exports:&amp;nbsp;&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;PROJ_CALL_STATUS PROJ_ROOT PROJ_CONFIG_FILE PROJ_CONFIG_WAS PROJ_CONFIG_STARTLINE PROJ_CONFIG_ENDLINE PROJ_LOCK_STARTLINE PROJ_LOCK_ENDLINE PROJ_CONFIG_ARRAY PROJ_LOCK_ARRAY" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-10">
+          <mxGeometry y="140" width="220" height="270" as="geometry" />
         </mxCell>
         <mxCell id="VWj8lnTXbPIEUd7eUML7-76" value="&lt;b&gt;Notes&lt;/b&gt;: &lt;span style=&quot;background-color: rgb(255, 204, 204);&quot;&gt;DO NOT EXECUTE IN SUBSHELL&lt;/span&gt; as this would prevent env vars from exporting properly" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-10">
-          <mxGeometry y="470" width="210" height="56" as="geometry" />
+          <mxGeometry y="410" width="220" height="56" as="geometry" />
         </mxCell>
         <mxCell id="VWj8lnTXbPIEUd7eUML7-33" value="gdm.locateProject" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" vertex="1" parent="1">
           <mxGeometry x="-390" y="322" width="240" height="370" as="geometry" />
@@ -207,22 +193,11 @@
         <mxCell id="VWj8lnTXbPIEUd7eUML7-35" value="&lt;b&gt;output&lt;/b&gt;: call_status config_was proj_root proj_conf errors[] config_startline config_endline lock_startline lock_endline" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-33">
           <mxGeometry y="80" width="240" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="VWj8lnTXbPIEUd7eUML7-64" value="&lt;b&gt;side effects&lt;/b&gt;: if missing, creates GDM_REQUIRE_CONF file" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-33">
+        <mxCell id="VWj8lnTXbPIEUd7eUML7-64" value="&lt;b&gt;side effects&lt;/b&gt;: creates,&amp;nbsp;if missing and --init,&amp;nbsp;GDM_REQUIRE_CONF file" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-33">
           <mxGeometry y="140" width="240" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="VWj8lnTXbPIEUd7eUML7-40" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;gdm.locateConfSections&lt;/font&gt;" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#F2F2F2;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=default;align=center;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12;glass=0;swimlaneLine=0;strokeColor=default;dashed=1;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-33">
-          <mxGeometry y="190" width="240" height="90" as="geometry">
-            <mxRectangle y="190" width="240" height="30" as="alternateBounds" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="VWj8lnTXbPIEUd7eUML7-41" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;&lt;i&gt;input&lt;/i&gt;&lt;/span&gt;:&amp;nbsp;proj_conf" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-40">
-          <mxGeometry y="26" width="240" height="24" as="geometry" />
-        </mxCell>
-        <mxCell id="VWj8lnTXbPIEUd7eUML7-42" value="&lt;i&gt;output&lt;/i&gt;:&lt;font style=&quot;&quot;&gt;&amp;nbsp;errors[] config_startline config_endline lock_startline lock_endline&lt;span style=&quot;font-size: 10px;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/font&gt;&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-40">
-          <mxGeometry y="50" width="240" height="40" as="geometry" />
-        </mxCell>
         <mxCell id="VWj8lnTXbPIEUd7eUML7-61" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;gdm.validateConf&lt;/font&gt;" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#F2F2F2;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=default;align=center;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12;glass=0;swimlaneLine=0;strokeColor=default;dashed=1;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-33">
-          <mxGeometry y="280" width="240" height="90" as="geometry">
+          <mxGeometry y="190" width="240" height="90" as="geometry">
             <mxRectangle y="280" width="240" height="30" as="alternateBounds" />
           </mxGeometry>
         </mxCell>
@@ -231,6 +206,17 @@
         </mxCell>
         <mxCell id="VWj8lnTXbPIEUd7eUML7-63" value="&lt;i&gt;output&lt;/i&gt;: errors[]&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-61">
           <mxGeometry y="60" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="VWj8lnTXbPIEUd7eUML7-40" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;gdm.locateConfSections&lt;/font&gt;" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#F2F2F2;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=default;align=center;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12;glass=0;swimlaneLine=0;strokeColor=default;dashed=1;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-33">
+          <mxGeometry y="280" width="240" height="90" as="geometry">
+            <mxRectangle y="190" width="240" height="30" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VWj8lnTXbPIEUd7eUML7-41" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;&lt;i&gt;input&lt;/i&gt;&lt;/span&gt;:&amp;nbsp;proj_conf" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-40">
+          <mxGeometry y="26" width="240" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="VWj8lnTXbPIEUd7eUML7-42" value="&lt;i&gt;output&lt;/i&gt;:&lt;font style=&quot;&quot;&gt;&amp;nbsp;errors[] config_startline config_endline lock_startline lock_endline&lt;span style=&quot;font-size: 10px;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/font&gt;&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="VWj8lnTXbPIEUd7eUML7-40">
+          <mxGeometry y="50" width="240" height="40" as="geometry" />
         </mxCell>
         <mxCell id="VWj8lnTXbPIEUd7eUML7-58" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.999;exitY=0.321;exitDx=0;exitDy=0;entryX=-0.004;entryY=0.182;entryDx=0;entryDy=0;entryPerimeter=0;exitPerimeter=0;" edge="1" parent="1" source="VWj8lnTXbPIEUd7eUML7-2" target="VWj8lnTXbPIEUd7eUML7-11">
           <mxGeometry relative="1" as="geometry" />

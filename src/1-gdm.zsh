@@ -133,10 +133,11 @@ gdm() {
     echo "$operation called"  #TEST
     if [[ -z "$PROJ_ROOT" ]] ; then
       local err_code
-      echo "calling gdm_loadProj" #TEST
-      gdm_loadProj --traverse-parents # DO NOT execute gdm_loadProj in subshell i.e. capture
+      echo "calling gdm.loadProject" #TEST
+      # DO NOT execute gdm.loadProject in subshell i.e. capture
+      gdm.loadProject --traverse-parents #FUNCTION CALL: gdm.register
       err_code=$?
-      echo "gdm_loadProj returned $err_code" #TEST
+      echo "gdm.loadProject returned $err_code" #TEST
       ((err_code)) && return $? 
     else echo "$(_S Y)PROJ_ROOT was not empty!$(_S)"  #TEST
     fi

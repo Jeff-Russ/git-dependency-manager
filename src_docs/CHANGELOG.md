@@ -5,8 +5,7 @@
 IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** list is a change made in the current commit: subsequent commits must have them deleted from this list and added to the top of the **Past Commits** list
 
 - [ ] Changes to  `2-gdm.init.zsh` :
-  - [x] prevent `$GDM_REQUIRED/` from not being within `$PROJ_ROOT/` but allow it to not be direct child directory.
-  - [ ] For cleanness: combine all function but `gdm.init` found in `2-gdm.init.zsh` into the one function called `gdm_loadProj` (keep `gdm.init` generally as it is and both it and `2-gdm.init.zsh` will continue to require not being run in subshell, which shouldn't be a problem).
+  - [x] For cleanliness in `2-gdm.init.zsh`: ~~combine all function but `gdm.init` found therein into the one function called `gdm.loadProject` (keep `gdm.init` generally as it is and both it and `2-gdm.init.zsh` will continue to require not being run in subshell, which shouldn't be a problem).~~ merge `gdm_exportFromProjVars` into `gdm.loadProject` 
 - [ ] Lack of a setup option should default to a setup that removes the original `.git/` and does nothing else. If user provides a setup, do not remove the original `.git/`, thus `setup=:` can be used to retain `.git/`.
 - [ ] Have `gdm.require` gather all parsed requirements, check against `config_lock` and currently installed requirement (via scanning them) prior to processing any new or pre-existing require call.
 - [ ] Prior to executing setup, create a `$regis_parent_dir/${regis_id}.git` and place copy of original `.git/` in it.
@@ -22,6 +21,11 @@ IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** lis
 ## Past Commits
 
 This list is in reverse order: Items on top are changed made in most recent to the current commit (but not the current commit).
+
+#### Error if \$GDM_REQUIRED is not within PROJ_ROOT (unless experimental)
+
+* Changes to  `2-gdm.init.zsh` :
+  * prevent `$GDM_REQUIRED/` from not being within `$PROJ_ROOT/` but allow it to not be direct child directory.
 
 #### commit -m `Make gdm_parseRequirement output complete requirement details, etc`
 
