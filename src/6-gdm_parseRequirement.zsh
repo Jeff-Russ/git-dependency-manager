@@ -1,5 +1,5 @@
 
-export GDM_REQUIREMENT_VARS=(remote_url rev setup destin_option destin_value rev_is hash tag branch setup_hash to regis_parent_dir regis_prefix regis_suffix 
+export GDM_REQUIREMENT_VARS=(remote_url rev setup destin_option destin_value rev_is hash tag branch to setup_hash regis_parent_dir  
   regis_id regis_instance destin_instance regis_manifest regis_snapshot previously_registered previous_regis_error)
 
 gdm_parseRequirement() {
@@ -7,84 +7,47 @@ gdm_parseRequirement() {
   # with information on previous registration, if found. It does not check for any installations beside the registration.
 
   # Input is the following arguments (same arguments as expected by gdm.require, optionally prepended with flags)
-  #     [<flags>] [https://][<domain>/]<vendor>/<repo>[.git][#<hash|tag|branch>] [setup=<function>|<script_path>|cmd>] [<destin-flag>=<path>|<dirname>]
-  #  (1st arg (after flags) is referred to here as $repo_identifier)
-  # Destination Options: 
-  #   Choosing one of the following options to define an install location 
-  #   for a given required repository/version. TODO: Choosing more than one will result 
-  #   in more than one installation of the same repository/version. Providing none of 
-  #   the following options defaults to installing a directory whose name is the 
-  #   repository name, placed in the \$GDM_REQUIRED directory. This is equivalent to 
-  #   providing `-as=<repo_name>`. Options ending with `-as` define the path to the 
-  #   installed directory, including the installed directory's name and those ending with 
-  #   `-in` define the path to the parent directory where the installation, which will be 
-  #   given the default name that is the repository name. 
-  #  Examples:
-  #     as=name                   Install as custom directory name to \$GDM_REQUIRED.
-  #     to-proj-as=./parent/name  Install as custom directory name, provided as
-  #                               a path relative to the project root. The relative path  
-  #                               must start with ./ a directory name or ../ and not /
-  #     to-fs-as=/parent/name     Install as custom directory name, provided as
-  #                               an absolute path starting with / whose location is 
-  #                               not contained by the project root.
-  #     to-proj-in=./parent       Install in a custom parent directory, provided as
-  #                               a path relative to the project root. The relative path  
-  #                               must start with ./ a directory name or ../ and not /
-  #     to-fs-in=/parent          Install in a custom parent directory, provided as
-  #                               an absolute path starting with / whose location is 
-  #                               not contained by the project root.
-  #     These are temporarily arrays to detect erroneous double assignment but TODO: support multiple locations
-  # orginal gdm_parseRequirement output sets: 
-  #     remote_url rev rev_is hash tag branch 
-  #     to destin_option       (to is more recently added, destin_option was too but we won't need it I think)
-  #     setup setup_hash regis_parent_dir regis_prefix regis_suffix regis_instance destin_instance 
-  #  more output from?
-  #     regis_manifest regis_snapshot previously_registered   REMOVING: register_created
-  # of the above, the following need to be passed on to gdm_register sometime after the call to this function (if registering)
-  #     remote_url hash setup regis_manifest regis_instance regis_snapshot regis_parent_dir regis_id destin_instance
-  #  which are the following (only line's value will be in \"\" and ending with semicolons):
-  #   keep?                                                            BLANK? SETBY
-  #   Y remote_url=<expanded from repo_identifier, usualy lowercased)  never  expandRemoteRef 
-  #     rev=[<revision specfied after # in repo_identifier]            maybe  expandRemoteRef
-  #     rev_is=hash|tag|tag_pattern|branch                             never  expandRemoteRef
-  #   Y hash=<full_hash (lowercased) from repo_identifier>             never  expandRemoteRef
-  #     tag=[<full_tag not lowercased>]                                maybe  expandRemoteRef
-  #     branch=[<branch_name not lowercased>]                          maybe  expandRemoteRef
-  #   ? to=<name>|<normalized relpath>|<normalized abspath>            never  parseRequirement
-  #   ? destin_option=to|as|to-proj-as|to-fs-as|to-proj-in|to-fs-in    maybe  parseIfDesinationOption
-  #   ? destin_value=<value provided by user with destin_option>       maybe  parseIfDesinationOption
-  #   Y setup=[<executable value provided>]                            maybe  parseRequirement
-  #   N setup_hash=[hash of setup if passed]                           maybe  parseRequirement
-  #   Y regis_parent_dir=$GDM_REGISTRY/domain/vendor/repo              never  parseRequirement
-  #   N regis_prefix=<tag if found>|<estim. short hash if no tag>      never  parseRequirement
-  #   N regis_suffix=_setup-<setup hash>                               never  parseRequirement
-  #   Y regis_id=$regis_prefix$regis_suffix                            never  parseRequirement
-  #   Y regis_instance=$regis_parent_dir/$regis_prefix$regis_suffix    never  parseRequirement (previously gdm.register)
-  #   Y destin_instance=<full abs path to location where required>     never  parseRequirement
-  #   Y regis_manifest=<full abs path to manifest file in registry>    maybe 
-  #   Y regis_snapshot=<full abs path to manifest file in registry>    
-  #   Y previously_registered=true|false                               never
-  #   Y previous_regis_error=<GDM_ERRORS value>                        maybe NEW: if not previously registered, there is no error
+  #     --(dis)?allow-lone [https://][<domain>/]<vendor>/<repo>[.git][#<hash|tag|branch>] [setup=<function>|<script_path>|cmd>] [<destin-flag>=<path>|<dirname>]
+  #  (1st arg is referred to here as $repo_identifier)
+  # Output:
+  #                                                                  BLANK? SETBY
+  #   remote_url=<expanded from repo_identifier, usualy lowercased)  never  expandRemoteRef 
+  #   rev=[<revision specfied after # in repo_identifier]            maybe  expandRemoteRef (currently unused)
+  #   rev_is=hash|tag|tag_pattern|branch                             never  expandRemoteRef (currently unused)
+  #   hash=<full_hash (lowercased) from repo_identifier>             never  expandRemoteRef
+  #   tag=[<full_tag not lowercased>]                                maybe  expandRemoteRef
+  #   branch=[<branch_name not lowercased>]                          maybe  expandRemoteRef
+  #   to=<name>|<normalized relpath>|<normalized abspath>            never  parseRequirement (currently unused)
+  #   destin_option=to|as|to-proj-as|to-fs-as|to-proj-in|to-fs-in    maybe  parseIfDesinationOption (currently unused)
+  #   destin_value=<value provided by user with destin_option>       maybe  parseIfDesinationOption (currently unused)
+  #   setup=[<executable value provided>]                            maybe  parseRequirement
+  #   setup_hash=[hash of setup if passed]                           maybe  parseRequirement
+  #   regis_parent_dir=$GDM_REGISTRY/domain/vendor/repo              never  parseRequirement
+  #   regis_id=$regis_prefix$regis_suffix                            never  parseRequirement
+  #   regis_instance=$regis_parent_dir/$regis_prefix$regis_suffix    never  parseRequirement 
+  #   destin_instance=<full abs path to location where required>     never  parseRequirement
+  #   regis_manifest=<full abs path to manifest file in registry>    no     parseRequirement
+  #   regis_snapshot=<full abs path to manifest file in registry>    no     parseRequirement
+  #   previously_registered=true|false                               never  parseRequirement
+  #   previous_regis_error=<GDM_ERRORS value>                        maybe NEW: if not previously registered, there is no error
+
+  ################################# get flag arguments ##################################
+  local lone_regis_flag="" # default will be to allow register to be the only instance
+  while [[ "$1" =~ '^--' ]] ; do
+    if  [[ "$1" =~ '^--(dis)?allow-lone[^=]*$' ]] ; then 
+      ! [[ -z "$lone_regis_flag" ]] && echo "$(_S Y B)WARNING: $0 got multiple allow-lone option flags!$(_S)" >&2 ;
+      lone_regis_flag="$1" ; 
+    else echo "$(_S Y B)WARNING: $0 got unknown flag: $1$(_S)" >&2 
+    fi
+    shift # Even with ERROR (or WARNING, keep gobbling args so we have a proper "$1"
+  done
+  # [[ -z "$lone_regis_flag" ]] && lone_regis_flag="--allow-lone" # set default to allow it
 
   local outputVars=("${GDM_REQUIREMENT_VARS[@]}")
+
   local invalid_argument=$GDM_ERRORS[invalid_argument] # To make code a bit cleaner
 
   if ! (($#)) ; then echo "$(_S Y)$0 received no arguments!$(_S)" >&2  ; return $invalid_argument ; fi
-
-  ################################# get flag arguments ##################################
-  local lone_regis_flag="" # default will be to allow registry to be the only instance
-  while [[ "$1" =~ '^--' ]] ; do
-    if  [[ "$1" =~ '^--(force-re-register|force)$' ]] ; then shift # ignore as this doesn't concern this function
-    elif  [[ "$1" =~ '^--(dis)?allow-lone[^=]*$' ]] ; then 
-      ! [[ -z "$lone_regis_flag" ]] && lone_regis_flag=ERROR || lone_regis_flag="$1" 
-      shift ; # Even with ERROR (multiple redundant flags), keep gobbling args so we have an error messages with proper "$1"
-    elif [[ "$1" =~ '^--dry-run$' ]] ; then shift  # ignore as this doesn't concern this function
-    # possibly add more options here, later on
-    else break 
-    fi
-  done
-  [[ -z "$lone_regis_flag" ]] && lone_regis_flag="--allow-lone" # set default to allow it
-  if [[ "$lone_regis_flag" == ERROR ]] ; then echo "$(_S R S)$1 has multiple allow-lone options specified!$(_S)" >&2 ; return $invalid_argument ; fi
   
   ############################ expand repo_identifier argument ##########################
   # TODO: this is unsafe: PROJ_ROOT should always be non-empty if called from project:
@@ -94,7 +57,6 @@ gdm_parseRequirement() {
   ! requirement="$(gdm_expandRemoteRef "$repo_identifier")" && return $?
   local remote_url rev rev_is hash tag branch # <- these are what output of gdm_expandRemoteRef assigns
   eval "$requirement" ; # all requirement vars are set but rev, branch, tag may be empty.
-
   
   ####################### get setup and destination arguments ###########################
   local setup destin_option destin_value to destin_instance 
@@ -145,10 +107,10 @@ gdm_parseRequirement() {
   # NOTE: when regis_prefix is a hash, it is an estimate that may need elongation (done later in this function)
   # [[ -z "$regis_prefix" ]] && return 64 #TODO: what was this??
 
-  local regis_instance="$regis_parent_dir/$regis_prefix$regis_suffix" #TODO: this is first assignment yet no local so I added it
+  local regis_id="$regis_prefix$regis_suffix"
+  local regis_instance="$regis_parent_dir/$regis_id" 
 
   local manifest_found=false
-  local regis_id="$regis_prefix$regis_suffix"
 
   if [[ -d "$regis_parent_dir" ]] ; then
     # Expand Hash to be long enough to not clash 

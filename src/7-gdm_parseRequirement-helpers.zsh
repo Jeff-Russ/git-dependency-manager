@@ -107,6 +107,31 @@ gdm_parseIfDesinationOption() {
   #     if ! destin_assignments="$(gdm_parseIfDesinationOption $arg)" ; then return $?
   #     elif ! [[ -z "$destin_assignments" ]] ; then
   #       local to destin_instance ; eval "$destin_assignments"  # then do something with them
+  # Destination Options: 
+  #   Choosing one of the following options to define an install location 
+  #   for a given required repository/version. TODO: Choosing more than one will result 
+  #   in more than one installation of the same repository/version. Providing none of 
+  #   the following options defaults to installing a directory whose name is the 
+  #   repository name, placed in the \$GDM_REQUIRED directory. This is equivalent to 
+  #   providing `-as=<repo_name>`. Options ending with `-as` define the path to the 
+  #   installed directory, including the installed directory's name and those ending with 
+  #   `-in` define the path to the parent directory where the installation, which will be 
+  #   given the default name that is the repository name. 
+  #  Examples:
+  #     as=name                   Install as custom directory name to \$GDM_REQUIRED.
+  #     to-proj-as=./parent/name  Install as custom directory name, provided as
+  #                               a path relative to the project root. The relative path  
+  #                               must start with ./ a directory name or ../ and not /
+  #     to-fs-as=/parent/name     Install as custom directory name, provided as
+  #                               an absolute path starting with / whose location is 
+  #                               not contained by the project root.
+  #     to-proj-in=./parent       Install in a custom parent directory, provided as
+  #                               a path relative to the project root. The relative path  
+  #                               must start with ./ a directory name or ../ and not /
+  #     to-fs-in=/parent          Install in a custom parent directory, provided as
+  #                               an absolute path starting with / whose location is 
+  #                               not contained by the project root.
+  #     TODO: support multiple locations
   local arg="$1"
   local outputVars=(destin_option destin_value to destin_instance) 
   local destin_option destin_value to destin_instance

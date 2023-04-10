@@ -1,75 +1,67 @@
-##### NEW VERSION OF gdm.register, WHICH IS END OF OLD VERSION (THE PART THAT ACTUALLY MODIFIES THE FS) ###############
-
-
+export GDM_REGISTRATION_VARS=(remote_url rev rev_is hash tag branch to setup regis_parent_dir regis_id setup_hash
+regis_instance destin_instance regis_manifest regis_snapshot previously_registered previous_regis_error register_created)
 
 gdm.register() {
   # Input: $1 is assigments of remote_url hash setup regis_manifest regis_instance regis_snapshot regis_parent_dir regis_id destin_instance
   # Needed: GDM_VERSION GDM_MANIF_VARS GDM_SNAP_EXT destructured GDM_ERRORS
 
   local force_re_register=false
-  local force_arg=""
-  local allow_lone_registry=true
-  local dry_run=false
 
-  if ! (($#)) ; then echo "$(_S Y)$0 received no arguments!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument] ; fi
+  local force_reregister_lone_flag="" 
+  local dry_run=false # If true, gdm.register can be used as a visual front end for a dry run of parseRequirement
 
+  local lone_regis_flag="--allow-lone-register"
   while [[ "$1" =~ '^--' ]] ; do
-    if  [[ "$1" =~ '^--(force-re-register|force)$' ]] ; then force_arg="$1" force_re_register=true ; shift
-    elif  [[ "$1" =~ '^--allow-lone[^=]*$' ]] ; then allow_lone_registry=true ; shift 
-    elif [[ "$1" =~ '^--disallow-lone[^=]*$' ]] ; then allow_lone_registry=false ; shift 
+    if  [[ "$1" =~ '^--(force-re-register|force)$' ]] ; then force_reregister_lone_flag="$1" force_re_register=true ; shift
     elif [[ "$1" =~ '^--dry-run$' ]] ; then dry_run=true ; shift 
     # possibly add more options here, later on
     else break
     fi
   done
 
+  if ! (($#)) ; then echo "$(_S Y)$0 received no arguments!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument] ; fi
+
+  local outputVars=("${GDM_REGISTRATION_VARS[@]}")
+  local register_created=false
+
   # load GDM_ERRORS (expand associate keys as local variables)
   if ! eval "$(gdm_fromMap GDM_ERRORS --local --all)" ; then 
     echo "$(_S R E)gdm_error_code_misread$(_S)" >&2  ; return $GDM_ERRORS[gdm_error_code_misread]
   fi
 
+  ###### PARSE REQUIREMENT ########################################################################
   local requirement requirement_error
   requirement="$(gdm_parseRequirement $@)" ; requirement_error=$? #FUNCTION CALL: gdm_parseRequirement
   ((requirement_error==invalid_argument)) && return $invalid_argument ;
-  local $GDM_REQUIREMENT_VARS #NEW
-  # local remote_url rev rev_is hash tag branch to setup setup_hash regis_parent_dir regis_prefix regis_suffix regis_id
-  # local regis_instance destin_instance regis_manifest regis_snapshot previously_registered previous_regis_error
-  eval "$requirement"
+  local $GDM_REQUIREMENT_VARS ;  eval "$requirement"
   
-  local register_created=false # outputVars are $requirement assigments + register_created
-  local outputVars=(remote_url rev rev_is hash tag branch to setup setup_hash regis_parent_dir regis_prefix regis_suffix regis_id
-    regis_instance destin_instance regis_manifest regis_snapshot previously_registered previous_regis_error register_created)
-  
+
+  ###### INFORMAIONAL OUTPUT (TO stderr TO KEEP stdout CLEAR FOR outputVars) ######################
   if $previously_registered ; then
     echo "$(_S D S E)Validating previous registration for $@ in ${regis_instance//$GDM_REGISTRY\//} ...$(_S)" >&2
     if ((previous_regis_error==0)) ; then
       echo "$(_S G)Previous registration is valid!$(_S) Location: \$GDM_REGISTRY/${regis_parent_dir#*$GDM_REGISTRY/}/$regis_id" >&2
-      if $force_re_register ; then echo "$(_S M)Re-generating registration.$(_S) Reason: $force_arg" >&2
-      else
-        gdm_echoVars $outputVars ; return 0 ;
-      fi
-
+      gdm_echoVars $outputVars ; return 0 ;
     elif ((previous_regis_error==manifest_missing)) ; then 
       echo "$(_S M)Generating new registration.$(_S) Reason: previous regis_manifest not found in \$GDM_REGISTRY" >&2
-    else echo "$(_S M)Re-generating registration.$(_S) Reason: $(gdm_keyOfMapWithVal GDM_ERRORS $previous_regis_error)" >&2
+    elif ((previous_regis_error==lone_instance)) ; then 
+      echo "$(_S M)Generating new registration.$(_S) Reason: $force_reregister_lone_flag was passed and previous register has no required instances" >&2
+    else
+      echo "$(_S M)Re-generating registration.$(_S) Reason: $(gdm_keyOfMapWithVal GDM_ERRORS $previous_regis_error)" >&2
     fi
-  else
-    echo "$(_S M)Generating new registration for $@$(_S) Reason: not previously registered." >&2
+  else echo "$(_S M)Generating new registration for $@$(_S) Reason: not previously registered." >&2
   fi
 
+
+  ###### PERFORM REGISTRATION (WITH INFORMATIONAL OUTPUT) #########################################
   if $dry_run ; then gdm_echoVars $outputVars ; return 0 ; fi
-
-
   # REMOVE OLD BEFORE (RE)CREATING REGISTER:
   [[ -d "$regis_instance" ]] && rm -rf "$regis_instance" ;
   # [[ -f "$regis_manifest" ]] && rm -rf "$regis_manifest" ; # (commented out since regis_manifest is inside regis_instance)
   [[ -d "$regis_snapshot" ]] && rm -rf "$regis_snapshot" ;
   mkdir -p "$regis_parent_dir"
-
-  local gdm_version="$GDM_VERSION"
-  # local regis_instance="\$GDM_REGISTRY/${regis_parent_dir#*$GDM_REGISTRY/}/$regis_id" #Not sure why I had this
+  local gdm_version="$GDM_VERSION" #NEEDED: written to manifest!
   local manifest_contents gdm_manifest_inode
-
   # CLONE:
   gdm_echoAndExec "cd \"$regis_parent_dir\" && git clone --filter=blob:none --no-checkout \"$remote_url\" \"$regis_id\"" || return $clone_failed
   # CHECKOUT:

@@ -1,17 +1,17 @@
-<mxfile host="Electron" modified="2023-04-09T21:38:03.773Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.1.2 Chrome/106.0.5249.199 Electron/21.4.3 Safari/537.36" etag="gZ36NtDIK1_BvucJk4Fc" version="21.1.2" type="device">
+<mxfile host="Electron" modified="2023-04-10T19:48:06.526Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.1.2 Chrome/106.0.5249.199 Electron/21.4.3 Safari/537.36" etag="jISMZPreGZ6oT5eKZNIX" version="21.1.2" type="device">
   <diagram name="Page-1" id="5d7acffa-a066-3a61-03fe-96351882024d">
     <mxGraphModel dx="2353" dy="913" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="#ffffff" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
         <mxCell id="AZiJ76leZRMekGIFPpnd-1" value="gdm_parseRequirement" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" parent="1" vertex="1">
-          <mxGeometry x="620" y="60" width="250" height="390" as="geometry" />
+          <mxGeometry x="620" y="60" width="250" height="320" as="geometry" />
         </mxCell>
-        <mxCell id="AZiJ76leZRMekGIFPpnd-2" value="&lt;b&gt;input&lt;/b&gt;: $flags[@] $require_args[@]&lt;br&gt;flags: --allow-lone | --disallow-lone" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-1" vertex="1">
-          <mxGeometry y="26" width="250" height="44" as="geometry" />
+        <mxCell id="AZiJ76leZRMekGIFPpnd-2" value="&lt;b&gt;input&lt;/b&gt;: [--(dis)?allow-lone&lt;span style=&quot;background-color: initial;&quot;&gt;] $require_args[@]&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-1" vertex="1">
+          <mxGeometry y="26" width="250" height="24" as="geometry" />
         </mxCell>
         <mxCell id="AZiJ76leZRMekGIFPpnd-64" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;gdm_expandRemoteRef&lt;/font&gt;" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#F2F2F2;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=default;align=center;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12;glass=0;swimlaneLine=0;strokeColor=default;dashed=1;" parent="AZiJ76leZRMekGIFPpnd-1" vertex="1">
-          <mxGeometry y="70" width="250" height="90" as="geometry">
+          <mxGeometry y="50" width="250" height="90" as="geometry">
             <mxRectangle y="60" width="250" height="30" as="alternateBounds" />
           </mxGeometry>
         </mxCell>
@@ -22,7 +22,7 @@
           <mxGeometry y="60" width="250" height="20" as="geometry" />
         </mxCell>
         <mxCell id="AZiJ76leZRMekGIFPpnd-67" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;gdm_parseIfDesinationOption&lt;/font&gt;" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#F2F2F2;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12;swimlaneLine=0;strokeColor=default;dashed=1;" parent="AZiJ76leZRMekGIFPpnd-1" vertex="1">
-          <mxGeometry y="160" width="250" height="90" as="geometry" />
+          <mxGeometry y="140" width="250" height="90" as="geometry" />
         </mxCell>
         <mxCell id="AZiJ76leZRMekGIFPpnd-68" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;&lt;i style=&quot;&quot;&gt;input&lt;/i&gt;&lt;/span&gt;: &lt;font style=&quot;font-size: 10px;&quot;&gt;&amp;lt;any require option arg&amp;gt;&lt;font style=&quot;border-color: var(--border-color); font-size: 10px;&quot;&gt;&amp;nbsp;&lt;/font&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-67" vertex="1">
           <mxGeometry y="26" width="250" height="24" as="geometry" />
@@ -30,11 +30,11 @@
         <mxCell id="AZiJ76leZRMekGIFPpnd-69" value="&lt;i style=&quot;&quot;&gt;output&lt;/i&gt;:&lt;font style=&quot;background-color: initial; font-size: 10px;&quot;&gt;&amp;nbsp;destin_option destin_value to destin_instance&lt;/font&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&amp;nbsp;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-67" vertex="1">
           <mxGeometry y="50" width="250" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="AZiJ76leZRMekGIFPpnd-3" value="&lt;b&gt;output&lt;/b&gt;:&amp;nbsp;&lt;font style=&quot;font-size: 11px;&quot;&gt;remote_url rev rev_is hash tag branch to setup setup_hash regis_parent_dir regis_prefix regis_suffix&amp;nbsp;&lt;div style=&quot;&quot;&gt;&amp;nbsp; &amp;nbsp; regis_instance destin_instance regis_manifest regis_snapshot previously_registered previous_regis_error&lt;/div&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-1" vertex="1">
-          <mxGeometry y="250" width="250" height="100" as="geometry" />
+        <mxCell id="AZiJ76leZRMekGIFPpnd-3" value="&lt;b&gt;output&lt;/b&gt;: &lt;span style=&quot;font-size: 11px;&quot;&gt;$&lt;/span&gt;GDM_REQUIREMENT_VARS&lt;span style=&quot;background-color: initial;&quot;&gt;[@]&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-1" vertex="1">
+          <mxGeometry y="230" width="250" height="40" as="geometry" />
         </mxCell>
         <mxCell id="AZiJ76leZRMekGIFPpnd-5" value="&lt;b&gt;requires&lt;/b&gt;:&lt;font style=&quot;font-size: 10px;&quot;&gt;&amp;nbsp;GDM_MANIF_VALIDATABLES&amp;nbsp;&lt;br&gt;PROJ_ROOT&lt;br&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-1" vertex="1">
-          <mxGeometry y="350" width="250" height="40" as="geometry" />
+          <mxGeometry y="270" width="250" height="40" as="geometry" />
         </mxCell>
         <mxCell id="AZiJ76leZRMekGIFPpnd-7" value="gdm_validateInstance" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" parent="1" vertex="1">
           <mxGeometry x="630" y="529" width="260" height="272" as="geometry" />
@@ -73,22 +73,22 @@
           <mxGeometry y="212" width="210" height="56" as="geometry" />
         </mxCell>
         <mxCell id="AZiJ76leZRMekGIFPpnd-19" value="gdm.register" style="swimlane;html=1;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=#e0e0e0;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;swimlaneFillColor=#ffffff;align=center;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;fontFamily=Verdana;fontSize=12" parent="1" vertex="1">
-          <mxGeometry x="310" y="167" width="240" height="272" as="geometry" />
+          <mxGeometry x="310" y="167" width="240" height="200" as="geometry" />
         </mxCell>
-        <mxCell id="AZiJ76leZRMekGIFPpnd-20" value="&lt;b&gt;input&lt;/b&gt;: $flags[@] $require_args[@]&lt;br&gt;flags: --allow-lone | --disallow-lone&lt;br&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp;--force[-re-register]&amp;nbsp; --dry-run" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-19" vertex="1">
-          <mxGeometry y="26" width="240" height="64" as="geometry" />
+        <mxCell id="AZiJ76leZRMekGIFPpnd-20" value="&lt;b&gt;input&lt;/b&gt;: [--(dis)?allow-lone]&amp;nbsp; [--dry-run]&lt;span style=&quot;background-color: initial;&quot;&gt;&amp;nbsp;$require_args[@]&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-19" vertex="1">
+          <mxGeometry y="26" width="240" height="44" as="geometry" />
         </mxCell>
-        <mxCell id="AZiJ76leZRMekGIFPpnd-21" value="&lt;b&gt;output&lt;/b&gt;: $requirement (assignments output from gdm_parseRequirement) +&amp;nbsp;register_created" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-19" vertex="1">
-          <mxGeometry y="90" width="240" height="60" as="geometry" />
+        <mxCell id="AZiJ76leZRMekGIFPpnd-21" value="&lt;b&gt;output&lt;/b&gt;:&amp;nbsp;$GDM_REGISTRATION_VARS[@]" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-19" vertex="1">
+          <mxGeometry y="70" width="240" height="30" as="geometry" />
         </mxCell>
         <mxCell id="AZiJ76leZRMekGIFPpnd-23" value="&lt;b&gt;side effects&lt;/b&gt;: clones (and runs setup) to registry&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-19" vertex="1">
-          <mxGeometry y="150" width="240" height="40" as="geometry" />
+          <mxGeometry y="100" width="240" height="40" as="geometry" />
         </mxCell>
         <mxCell id="AZiJ76leZRMekGIFPpnd-24" value="&lt;b&gt;requires&lt;/b&gt;:" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-19" vertex="1">
-          <mxGeometry y="190" width="240" height="26" as="geometry" />
+          <mxGeometry y="140" width="240" height="26" as="geometry" />
         </mxCell>
         <mxCell id="AZiJ76leZRMekGIFPpnd-25" value="&lt;b&gt;Notes&lt;/b&gt;:&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="AZiJ76leZRMekGIFPpnd-19" vertex="1">
-          <mxGeometry y="216" width="240" height="56" as="geometry" />
+          <mxGeometry y="166" width="240" height="34" as="geometry" />
         </mxCell>
         <mxCell id="AZiJ76leZRMekGIFPpnd-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="AZiJ76leZRMekGIFPpnd-20" target="AZiJ76leZRMekGIFPpnd-2" edge="1">
           <mxGeometry relative="1" as="geometry" />

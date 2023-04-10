@@ -19,6 +19,9 @@ gdm.require() {
 
   # $force_re_register && force_re_require=true
 
+  local allow_orphan=true #TODO make this an argument option?
+  local lone_allow='--disallow-lone' ; $allow_orphan && lone_allow='--allow-lone'
+
   [[ -z "$PROJ_ROOT" ]] && PROJ_ROOT="$PWD" ; # TODO: this is unsafe: PROJ_ROOT should always be non-empty in require
 
   # load GDM_ERRORS (expand associate keys as local variables)
@@ -28,6 +31,7 @@ gdm.require() {
   
   local registration ; local reg_error=0
   registration="$(gdm.register $@)" || reg_error=$? #FUNCTION CALL: gdm.register
+
   # if $force_re_register ; then registration="$(gdm.register --force $@)" || error=$?
   # else registration="$(gdm.register $@)" || error=$?
   # fi
@@ -41,34 +45,32 @@ gdm.require() {
   fi
 
   # variables assigned in registration string:
-  local remote_url rev rev_is hash tag branch setup_hash regis_parent_dir regis_prev_valix regis_suffix 
-  local previously_registered register_created regis_instance regis_manifest regis_snapshot destin_instance 
+  local $GDM_REGISTRATION_VARS # Used: remote_url hash tag setup regis_id regis_instance destin_instance regis_manifest regis_snapshot
+  # NOT CURRENTLY USED: rev rev_is  branch to  regis_parent_dir previously_registered previous_regis_error register_created
   eval "$registration"
-  
-  local destin_manifest="$destin_instance/$regis_prefix$regis_suffix.$GDM_MANIF_EXT"
-  local allow_orphan=true #TODO make this an argument option?
-  local lone_allow='--disallow-lone' ; $allow_orphan && lone_allow='--allow-lone'
+
+
+  ##### VALIDATE REQUIRED INSTANCE VIA MANIFEST  ##################################################
+  local destin_manifest="$destin_instance/$regis_id.$GDM_MANIF_EXT"
   local assignments="$(gdm_echoVars $GDM_MANIF_VALIDATABLES)" #TODO: shouldn't these be --local? see gdm_validateInstance
   local prev_inst_error
   gdm_validateInstance $lone_allow $destin_manifest $destin_instance $regis_snapshot "$assignments" $GDM_MANIF_VALIDATABLES #FUNCTION CALL: gdm_validateInstance
   prev_inst_error=$?
-  
 
+  ##### RETURN IF REQUIRED INSTANCE IS VALID  #####################################################
   if ! ((prev_inst_error)) ; then echo "$(_S G)Previous valid installation found at \"${destin_instance//$PWD/.}\"$(_S)" ; return 0 ; fi
 
-  local reinistall_msg="remove current installation (first backing up if desired) by running\n\n  $(_S B)rm -rf \"${destin_instance//$PWD/.}\"$(_S)\n\nthen require again."
-  
-  local retry_ables=($manifest_inode_mismatch $manifest_missing) 
-
-  if (($retry_ables[(Ie)$prev_inst_error])) ; then  #TODO test
+  local retry_ables=($manifest_inode_mismatch $manifest_missing) # non-fatal gdm_validateInstance errors?
+  if (($retry_ables[(Ie)$prev_inst_error])) ; then  #TODO test this
     gdm_echoAndExec "cp -al \"$regis_manifest\" \"$destin_manifest\"" || {
-      echo "Suggested fix: $reinistall_msg"
+      echo "Suggested fix: $reinistall_msg remove current installation (first backing up if desired) by running\n\n  $(_S B)rm -rf \"${destin_instance//$PWD/.}\"$(_S)\n\nthen require again."
       return $GDM_ERRORS[hardlink_failed]
     }
     gdm_validateInstance "$assignments" regis_instance remote_url hash tag setup #FUNCTION CALL: gdm_validateInstance
     prev_inst_error=$? #TODO incorrect args???
   fi
 
+  # if prev_inst_error is in gdm_validateInstance errors then we backup?
   local backup_ables=($gdm_version_outdated $lone_instance $manifest_requirement_mismatch $instance_snaphot_mismatch) 
 
   if (($backup_ables[(Ie)$prev_inst_error])) ; then 

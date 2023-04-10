@@ -4,23 +4,35 @@
 
 IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** list is a change made in the current commit: subsequent commits must have them deleted from this list and added to the top of the **Past Commits** list
 
-- [ ] Changes to  `2-gdm.init.zsh` :
-  - [x] For cleanliness in `2-gdm.init.zsh`: ~~combine all function but `gdm.init` found therein into the one function called `gdm.loadProject` (keep `gdm.init` generally as it is and both it and `2-gdm.init.zsh` will continue to require not being run in subshell, which shouldn't be a problem).~~ merge `gdm_exportFromProjVars` into `gdm.loadProject` 
+- [x] Simplify `gdm_parseRequirement` output to only essential variables (remove: regis_prefix regis_suffix )
+- [ ] Change var/flag names: 
+  - [ ] allow-lone-register -> allow-unrequired
+  - [ ] destin_instance -> required_instance
+
 - [ ] Lack of a setup option should default to a setup that removes the original `.git/` and does nothing else. If user provides a setup, do not remove the original `.git/`, thus `setup=:` can be used to retain `.git/`.
-- [ ] Have `gdm.require` gather all parsed requirements, check against `config_lock` and currently installed requirement (via scanning them) prior to processing any new or pre-existing require call.
 - [ ] Prior to executing setup, create a `$regis_parent_dir/${regis_id}.git` and place copy of original `.git/` in it.
-- [ ] Simplify `gdm_parseRequirement` output to only essential variables.
+- [ ] Have `gdm.require` gather all parsed requirements, check against `config_lock` and currently installed requirement (via scanning them) prior to processing any new or pre-existing require call.
+- [ ] Changes to  `2-gdm.init.zsh` :
+  - [ ] Consolidate into two functions: `gdm.init` and `gdm.loadProject`
 - [ ] Add some new operations or sub-operations to GDM:
+  - [ ] `$GMD unrequire [destination option | all but destination option | entire requirement ]`
   - [ ] `$GMD registry --show-unrequired`  show registers without required instances
   - [ ] `$GMD registry --rm-unrequired`   remove registers without required instances
   - [ ] `$GDM required --list` list (per line) `$destin_instance vendor/reponame#$rev setup=$setup` for each installed requirement.
   - [ ] `$GDM required --info $destin_instance` show contents of manifest for installed requirement.
+
 - [ ] Mention in some documentation that setup function can be used to export the destination path to env vars. 
+
+
 
 
 ## Past Commits
 
 This list is in reverse order: Items on top are changed made in most recent to the current commit (but not the current commit).
+
+#### merge `gdm_exportFromProjVars` function into `gdm.loadProject` function
+
+* For cleanliness in `2-gdm.init.zsh`: ~~combine all function but `gdm.init` found therein into the one function called `gdm.loadProject` (keep `gdm.init` generally as it is and both it and `2-gdm.init.zsh` will continue to require not being run in subshell, which shouldn't be a problem).~~ merge `gdm_exportFromProjVars` into `gdm.loadProject` 
 
 #### Error if \$GDM_REQUIRED is not within PROJ_ROOT (unless experimental)
 
