@@ -39,20 +39,38 @@ export GDM_VER_COMPAT="1.0"
 export GDM_REGISTRY="${GDM_REGISTRY:=$HOME/.gdm_registry}" # might have been defined in environment
 export GDM_REQUIRED="${GDM_REQUIRED:=gdm_required}"         # can be overridden by $GDM_REQUIRE_CONF file
 export GDM_REQUIRE_CONF="gdm.zsh" 
+export GDM_CONFIG_LOCKVARS=(to remote_url hash tag setup_hash) # IN ORDER
 # export GDM_REQUIRED_LOCK="${GDM_REQUIRED_LOCK:=gdm_require.lock}"
 
 # environment variables used in require and register:
 export GDM_MANIF_EXT="gdm_manifest"
-export GDM_MANIF_VARS=(gdm_manifest_inode gdm_version regis_instance remote_url hash tag setup_hash)
-export GDM_MANIF_VALIDATABLES=(regis_instance remote_url hash tag setup_hash)
+export GDM_MANIF_VARS=(gdm_manifest_inode gdm_version register_path remote_url hash tag setup_hash)
+export GDM_MANIF_VALIDATABLES=(register_path remote_url hash tag setup_hash)
 # used only in register:
 export GDM_SNAP_EXT="gdm_snapshot"
+
 # used only in gdm_parseRequirement:
 export GDM_MIN_HASH_LEN=7 
 
 # NOTE: additional exported variables are in *-gdm-project.zsh
 
+
 declare -Ag GDM_ERRORS=(
+  # RENAMED GDM_ERRORS keys:
+  #   instance_missing        -> register_instance_missing        AND required_instance_missing
+  #   manifest_missing        -> register_manifest_missing        AND required_manifest_missing
+  #   lone_instance           -> register_manifest_unlinked       AND required_manifest_unlinked
+  #   manifest_inode_mismatch -> register_manifest_inode_mismatch AND required_manifest_inode_mismatch
+  #   snapshot_check_failed -> register_snapshot_gitswap_failed   AND required_snapshot_gitswap_failed
+  # NOTE: previously snapshot_check_failed was listed under gdm.register errors so it was really just today's register_snapshot_gitswap_failed
+  #   gdm_version_outdated    -> register_manifest_version_outdated AND required_manifest_version_outdated
+  # NOTE gdm_version_outdated was also retained for user checking against hypothetical 
+  #   manifest_requirement_mismatch -> register_manifest_requirement_mismatch AND required_manifest_requirement_mismatch
+  #   instance_snaphot_mismatch -> required_was_modified
+  #   snapshot_check_mismatch -> register_was_modified  AND required_was_modified
+  #   regis_snapshot_missing -> register_snapshot_missing
+
+  [gdm_version_outdated]=5 # retained for user checking (see below in this)
 
   # gdm_parseRequirement errors:
   [cannot_expand_remote_url]=11
@@ -62,28 +80,36 @@ declare -Ag GDM_ERRORS=(
   [cannot_find_hash]=15
   [invalid_argument]=16
 
-  # gdm_validateInstance errors: 
-  [instance_missing]=21 # required code directory missing, (checked before manifest missing in gdm_validateInstance)
-  [manifest_missing]=22 # manifest is within instance so manifest_missing usually means instance not missing
-  [lone_instance]=23 # If no other files w same inode as manifest exist, fail.
-  [manifest_inode_mismatch]=24 # If manifest inode mismatches actual, fail
-  [gdm_version_outdated]=25 # if manifest gdm_version does not start with GDM_VER_COMPAT, fail
-  [manifest_requirement_mismatch]=26 # If any manifest vars mismatch evaled vars, fail. 
-  [regis_snapshot_missing]=27 # if register snapshot is missing, fail
-  [instance_snaphot_mismatch]=28 # if required code mismatches snapshot, fail
+
+  # gdm_validateInstance errors (evaluted in order except for register_snapshot_missing which happens in either mode)
+  [register_instance_missing]=21              # $register_path directory does not exist
+  [register_manifest_missing]=22              # $register_manifest file does not exist 
+  [register_manifest_unlinked]=23             # --disallow-lone (not the default) and $register_manifest has no hardlinks
+  [register_manifest_inode_mismatch]=23       # $register_manifest file's inode does not match what the file says it is
+  [register_manifest_version_outdated]=25     # $register_manifest gdm_version does not start with GDM_VER_COMPAT
+  [register_manifest_requirement_mismatch]=26 # if certain $register_manifest variables mismatch requirement
+  [register_snapshot_gitswap_failed]=27       # cannot swap $register_path/.git to or from $register_path.gdm_snapshot/.git
+  [register_was_modified]=28                  # if $register_path code mismatches snapshot
+  [register_snapshot_missing]=30              # (NO MATTER gdm_validateInstance IS PASSED --register OR --required)
+  [required_instance_missing]=31              # $required_path directory does not exist
+  [required_manifest_missing]=32              # $required_manifest file does not exist
+  [required_manifest_unlinked]=33             # --disallow-lone (not the default) and $required_manifest has no hardlinks
+  [required_manifest_inode_mismatch]=34       # $register_manifest file's inode does not match what the file says it is
+  [required_manifest_version_outdated]=35     # $required_manifest gdm_version does not start with GDM_VER_COMPAT
+  [required_manifest_requirement_mismatch]=36 # certain $required_manifest variables mismatch requirement
+  [required_snapshot_gitswap_failed]=37       # cannot swap $required_path/.git to or from $required_path.gdm_snapshot/.git
+  [required_was_modified]=38                  # $required_path code mismatches snapshot
 
   # gdm.register errors:
-  [clone_failed]=31
-  [checkout_failed]=32
-  [setup_returned_error]=33
-  [manifest_creation_failed]=34
-  [snapshot_tempdir_failed]=35
-  [snapshot_preswap_failed]=36
-  [snapshot_check_failed]=37
-  [snapshot_check_mismatch]=38
-  [snapshot_mkdir_failed]=39
-  [snapshot_mv_git_failed]=40
-  [snapshot_postswap_failed]=41
+  [clone_failed]=41 
+  [checkout_failed]=42
+  [setup_returned_error]=43
+  [manifest_creation_failed]=44
+  [snapshot_tempdir_failed]=45
+  [snapshot_preswap_failed]=46
+  [snapshot_mkdir_failed]=47
+  [snapshot_mv_git_failed]=48
+  [snapshot_postswap_failed]=49
 
   # gdm.require errors
   [invalid_GDM_REQUIRED_path]=61
@@ -101,7 +127,7 @@ declare -Ag GDM_ERRORS=(
 gdm.error() { echo "${(k)GDM_ERRORS[(r)$1]}" ; } # reverse lookup return error codes (GDM_ERRORS)
 
 # currently accepted GDM_EXPERIMENTAL element values: (NOTE: ALL ARE VERY DANGEROUS TO FILESYSTEM)
-# destination_paths     (allow require installation destinations outside of project's GDM_REQUIRED dir)
+# flexible_required_paths     (allow require installation destinations outside of project's GDM_REQUIRED dir)
 # any_required_path     (allow project's GDM_REQUIRED dir to be in any location)
 if [[ "$(gdm_typeof GDM_EXPERIMENTAL)" =~ 'array' ]] ; then
     export GDM_EXPERIMENTAL # user has provided so just export to be safe
@@ -133,11 +159,11 @@ gdm() {
     echo "$operation called"  #TEST
     if [[ -z "$PROJ_ROOT" ]] ; then
       local err_code
-      echo "calling gdm.loadProject" #TEST
-      # DO NOT execute gdm.loadProject in subshell i.e. capture
-      gdm.loadProject --traverse-parents #FUNCTION CALL: gdm.register
+      echo "calling gdm.project" #TEST
+      # DO NOT execute gdm.project in subshell i.e. capture
+      gdm.project --traverse-parents #FUNCTION CALL: gdm.register
       err_code=$?
-      echo "gdm.loadProject returned $err_code" #TEST
+      echo "gdm.project returned $err_code" #TEST
       ((err_code)) && return $? 
     else echo "$(_S Y)PROJ_ROOT was not empty!$(_S)"  #TEST
     fi

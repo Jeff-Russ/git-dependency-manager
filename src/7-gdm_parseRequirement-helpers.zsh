@@ -97,16 +97,16 @@ gdm_parseIfDesinationOption() {
   # To be called in loop iterating each argument to require that may be and option to set the install detination.
 
   # IF $1 is an install destination option and is without error, return is 0 and output is assignments of:
-  #     destin_option   # option passed by user (their argument, up and not including first = )
-  #     destin_value    # value passed by user  (their argument, after first = )
+  #     required_path_opt   # option passed by user (their argument, up and not including first = )
+  #     required_path_val    # value passed by user  (their argument, after first = )
   #     to              # the install path that would appear after `to=` (name | abs path | relpath starting ../ or ./))
-  #     destin_instance # complete absolute path to install requirement to
+  #     required_path # complete absolute path to install requirement to
   # ELIF $1 is an install destination option with an error, return is $GDM_ERRORS[invalid_argument] and the error is output to stderr 
   # ELSE $1 is not an install detination option, return is 0 and output is empty
   # Usage: place in loop as 
   #     if ! destin_assignments="$(gdm_parseIfDesinationOption $arg)" ; then return $?
   #     elif ! [[ -z "$destin_assignments" ]] ; then
-  #       local to destin_instance ; eval "$destin_assignments"  # then do something with them
+  #       local to required_path ; eval "$destin_assignments"  # then do something with them
   # Destination Options: 
   #   Choosing one of the following options to define an install location 
   #   for a given required repository/version. TODO: Choosing more than one will result 
@@ -133,87 +133,87 @@ gdm_parseIfDesinationOption() {
   #                               not contained by the project root.
   #     TODO: support multiple locations
   local arg="$1"
-  local outputVars=(destin_option destin_value to destin_instance) 
-  local destin_option destin_value to destin_instance
+  local outputVars=(required_path_opt required_path_val to required_path) 
+  local required_path_opt required_path_val to required_path
 
-  if ! (($GDM_EXPERIMENTAL[(Ie)destination_paths])) ; then # experimental mode disabled....
+  if ! (($GDM_EXPERIMENTAL[(Ie)flexible_required_paths])) ; then # experimental mode disabled....
     if [[ "${arg:l}" =~ '^-{0,2}as[=].+' ]] ; then
-      destin_option="as"
-      destin_value="${arg#*=}"
-      if ! gdm_isNonPathStr "$destin_value" ; then  # TODO: perhaps allow dir/subdir (just prevent starting with ../ ./ or /)
-        echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\" Value must be a directory name and not a path!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument]
+      required_path_opt="as"
+      required_path_val="${arg#*=}"
+      if ! gdm_isNonPathStr "$required_path_val" ; then  # TODO: perhaps allow dir/subdir (just prevent starting with ../ ./ or /)
+        echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\" Value must be a directory name and not a path!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument]
       fi
-      to="$destin_value"
-      destin_instance="$PROJ_ROOT/$GDM_REQUIRED/$destin_value"
+      to="$required_path_val"
+      required_path="$PROJ_ROOT/$GDM_REQUIRED/$required_path_val"
       gdm_echoVars $outputVars
     fi
-  else # destination_paths experimental mode enabled....
+  else # flexible_required_paths experimental mode enabled....
     if [[ "$arg" =~ '^to=.+' ]] ; then # the 'to=' format is used in requirement lock...
       # so we'll convert lock form to user's long form so  next if block gets it
-      destin_option="to"
-      destin_value="${arg#*=}"
-      if gdm_isNonPathStr "$destin_value" ;            then arg="as=$destin_value"
-      elif [[ "$destin_value" =~ '^\/' ]] ;            then arg="to-fs-as=$destin_value"
-      elif [[ "$destin_value" =~ '^(\.\.\/|\.\/)' ]] ; then arg="to-proj-as=$destin_value"
-      elif [[ "$destin_value" =~ '^~\/' ]] ;           then arg="to-home-as=$destin_value"
+      required_path_opt="to"
+      required_path_val="${arg#*=}"
+      if gdm_isNonPathStr "$required_path_val" ;            then arg="as=$required_path_val"
+      elif [[ "$required_path_val" =~ '^\/' ]] ;            then arg="to-fs-as=$required_path_val"
+      elif [[ "$required_path_val" =~ '^(\.\.\/|\.\/)' ]] ; then arg="to-proj-as=$required_path_val"
+      elif [[ "$required_path_val" =~ '^~\/' ]] ;           then arg="to-home-as=$required_path_val"
       fi
     fi
 
     if [[ "${arg:l}" =~ '^-{0,2}as[=].+' ]] ; then
-      if [[ -z "$destin_option" ]] ; then destin_option=as ; destin_value="${arg#*=}" ; fi
+      if [[ -z "$required_path_opt" ]] ; then required_path_opt=as ; required_path_val="${arg#*=}" ; fi
 
-      if ! gdm_isNonPathStr "$destin_value" ; then  # TODO: perhaps allow dir/subdir (just prevent starting with ../ ./ or /)
-        echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\" Value must be a directory name and not a path!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument]
+      if ! gdm_isNonPathStr "$required_path_val" ; then  # TODO: perhaps allow dir/subdir (just prevent starting with ../ ./ or /)
+        echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\" Value must be a directory name and not a path!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument]
       fi
-      to="$destin_value"
-      destin_instance="$PROJ_ROOT/$GDM_REQUIRED/$destin_value"
+      to="$required_path_val"
+      required_path="$PROJ_ROOT/$GDM_REQUIRED/$required_path_val"
       gdm_echoVars $outputVars
 
     elif [[ "${arg:l}" =~ '^-{0,2}to-(proj|home|fs)-(in|as)[=].+' ]] ; then 
-      if [[ -z "$destin_option" ]] ; then destin_option=${arg%%=} ; destin_value="${arg#*=}" ; fi
+      if [[ -z "$required_path_opt" ]] ; then required_path_opt=${arg%%=} ; required_path_val="${arg#*=}" ; fi
       
       while [[ ${arg[1]} == - ]] ; do arg=${arg[2,-1]} ; done # trim all leading dashes
 
       # CHECK FOR PATH LOCATION NOTATION ERRORS:
-      local notated_as="$(gdm_pathNotation $destin_value)" # possible values:
+      local notated_as="$(gdm_pathNotation $required_path_val)" # possible values:
       # 'relative to /'   'equivalent to /'   'relative to ../'  'equivalent to ../'
       # 'relative to ./'  'equivalent to ./'  'relative to name'   'empty'  (but empty is not possible due to =.+)
       if [[ "${arg:l}" == 'to-proj-'* ]] && [[ $notated_as == *' /' ]] ; then
-        echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\"  Value cannot be absolute path starting /(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+        echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\"  Value cannot be absolute path starting /(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       elif [[ "${arg:l}" == 'to-fs-'* ]] && [[ $notated_as != *' /' ]] ; then
-        echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\"  Value must be absolute path starting /$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+        echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\"  Value must be absolute path starting /$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       elif [[ "${arg:l}" == 'to-home-'* ]] && [[ $notated_as != *' /' ]] ; then
-        echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\"  Value must be absolute path starting /$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+        echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\"  Value must be absolute path starting /$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       fi # there are other checks we could do like making sure not installing as / or ./ but that'll get ironed out later
 
-      # SET OUTPUT VARIABLE: destin_instance
-      local val_target="$destin_value" ; [[ "${arg:l}" =~ '^to-(proj|fs)-in' ]] && val_target+="/$repo_name"
+      # SET OUTPUT VARIABLE: required_path
+      local val_target="$required_path_val" ; [[ "${arg:l}" =~ '^to-(proj|fs)-in' ]] && val_target+="/$repo_name"
 
-      if ! destin_instance="$(abspath $val_target $PROJ_ROOT 2>&1)" ; then
-        echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\"  $destin_instance$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+      if ! required_path="$(abspath $val_target $PROJ_ROOT 2>&1)" ; then
+        echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\"  $required_path$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       fi
 
       # CHECK FOR PATH LOCATION ERRORS:
-      if [[ -f $val_target ]] || [[ -f $destin_instance ]] ; then
-        echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\" (path resolves to or includes an existing file) $(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+      if [[ -f $val_target ]] || [[ -f $required_path ]] ; then
+        echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\" (path resolves to or includes an existing file) $(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       fi
-      local target_relto_proj="$(gdm_dirA_relto_B $destin_instance $PROJ_ROOT t p)" 
-      local target_relto_req="$(gdm_dirA_relto_B $destin_instance $PROJ_ROOT/$GDM_REQUIRED t r)"
+      local target_relto_proj="$(gdm_dirA_relto_B $required_path $PROJ_ROOT t p)" 
+      local target_relto_req="$(gdm_dirA_relto_B $required_path $PROJ_ROOT/$GDM_REQUIRED t r)"
       if [[ "$target_relto_proj" == 't is p' ]] ; then # possible values:  "t contains p"  "t is contained by p"  "t is p"  "t has no relation to p" 
-        echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\" Value cannot be project root$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+        echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\" Value cannot be project root$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       elif [[ "$target_relto_proj" == 't is contained by p' ]] && [[ "${arg:l}" == 'to-fs-'* ]] ; then 
-        echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\" Value cannot be within the project root$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+        echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\" Value cannot be within the project root$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       elif [[ "$target_relto_req" == 't is r' ]] ; then # possible values:  "t contains r"  "t is contained by r"  "t is r"  "t has no relation to p" 
-        echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\" Value cannot be project's $GDM_REQUIRED)$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+        echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\" Value cannot be project's $GDM_REQUIRED)$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       elif [[ "$target_relto_req" == 't is contained by r' ]] ; then 
-        echo "$(_S R S)Invalid argument: $destin_option=\"$destin_value\" Value cannot be within project's $GDM_REQUIRED)$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
+        echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\" Value cannot be within project's $GDM_REQUIRED)$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       fi
 
       # SET OUTPUT VARIABLE: to
       local to
-      if [[ "${arg:l}" == 'to-fs-'* ]] ; then to="$destin_instance"
+      if [[ "${arg:l}" == 'to-fs-'* ]] ; then to="$required_path"
       else # set to to normalized relative path
-        if ! to="$(relpath $destin_instance $PROJ_ROOT 2>&1)" ; then 
+        if ! to="$(relpath $required_path $PROJ_ROOT 2>&1)" ; then 
           echo "$(_S R S)Invalid argument: $arg $to$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
         fi
       fi

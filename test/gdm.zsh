@@ -4,7 +4,7 @@
 # export GDM_VER='1.0beta'
 # export GDM="$GDM_REGISTRY/gdm-$GDM_VER.zsh"
 
-export GDM_REGISTRY="$HOME/.shell_extensions/GIT_REPO_DEPS/git-dependency-manager/test/gdm_require" #TEST
+export GDM_REGISTRY="$HOME/.shell_extensions/GIT_REPO_DEPS/git-dependency-manager/test/GDM_REGISTRY_TEST" #TEST
 export GDM_VER='1.0beta' #TEST
 export GDM="${GDM:=${0:a:h:h}/dist/gdm-test.zsh}" #TEST
 

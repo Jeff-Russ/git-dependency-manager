@@ -2,13 +2,23 @@
 
 ## Current Commit
 
+#### rename a lot, start project awareness in gdm.require: call gdm.project and define pack function
+
 IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** list is a change made in the current commit: subsequent commits must have them deleted from this list and added to the top of the **Past Commits** list
 
-- [x] Simplify `gdm_parseRequirement` output to only essential variables (remove: regis_prefix regis_suffix )
-- [ ] Change var/flag names: 
-  - [ ] allow-lone-register -> allow-unrequired
-  - [ ] destin_instance -> required_instance
-
+- [ ] Change var/flag/function/file names: 
+  - [x] destin_instance -> required_path, regis_instance -> register_path, previously_registered -> prev_registered, previous_regis_error -> prev_registration_error, regis_id -> register_id, regis_manifest -> register_manifest, regis_snapshot -> register_snapshot, regis_parent_dir -> register_parent, 2-gdm.init.zsh -> 2-gdm.project.zsh gdm.loadProject() ->  gdm.project()  (and more in GDM_ERRORS as see in comment in `1-gdm.zsh`)
+- [ ] To gdm.require:
+  - [ ] Add project awareness 
+    - [x] ensure gdm.project is/has been called 
+  - [ ] implement config/config_lock to (when called via config or directly in user shell):
+    - [x] make a pack function to help in comparing large sets of variables
+    - [ ] prevent requirements that have the same required_path as a previous requirement found on FS or in config/config_lock 
+    - [ ] add to both config and config lock newly required only if they don't override require paths of different requirements.
+- [ ] gdm_echoAndExec
+  - [ ] BUG: `gdm.require  juce-framework/juce#master`  outputs `cp -al "$GDM_REGISTRY/github.com/juce-framework/juce/7.0.5" "$GDM_REGISTRYd/juce"` via `gdm_echoAndExec`
+- [ ] To gdm.register:
+  - [ ] Directly executing `gdm.require` from within a project will register to the default value of `GDM_REGISTRY` even if the project the project's config bypasses this. Keep this behavior?? 
 - [ ] Lack of a setup option should default to a setup that removes the original `.git/` and does nothing else. If user provides a setup, do not remove the original `.git/`, thus `setup=:` can be used to retain `.git/`.
 - [ ] Prior to executing setup, create a `$regis_parent_dir/${regis_id}.git` and place copy of original `.git/` in it.
 - [ ] Have `gdm.require` gather all parsed requirements, check against `config_lock` and currently installed requirement (via scanning them) prior to processing any new or pre-existing require call.
@@ -20,7 +30,6 @@ IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** lis
   - [ ] `$GMD registry --rm-unrequired`   remove registers without required instances
   - [ ] `$GDM required --list` list (per line) `$destin_instance vendor/reponame#$rev setup=$setup` for each installed requirement.
   - [ ] `$GDM required --info $destin_instance` show contents of manifest for installed requirement.
-
 - [ ] Mention in some documentation that setup function can be used to export the destination path to env vars. 
 
 
@@ -29,6 +38,10 @@ IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** lis
 ## Past Commits
 
 This list is in reverse order: Items on top are changed made in most recent to the current commit (but not the current commit).
+
+#### General cleanup, notably: gdm_parseRequirement and gdm.require in/out
+
+Simplify `gdm_parseRequirement` output to only essential variables (remove: regis_prefix regis_suffix )
 
 #### merge `gdm_exportFromProjVars` function into `gdm.loadProject` function
 

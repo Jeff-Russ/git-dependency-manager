@@ -5,4 +5,4 @@ gdm-test.zsh
 *.drawio.bkp
 /test/*
 !/test/gdm.zsh
-
+!/test/packTest.zsh

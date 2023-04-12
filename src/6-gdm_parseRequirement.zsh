@@ -1,35 +1,35 @@
 
-export GDM_REQUIREMENT_VARS=(remote_url rev setup destin_option destin_value rev_is hash tag branch to setup_hash regis_parent_dir  
-  regis_id regis_instance destin_instance regis_manifest regis_snapshot previously_registered previous_regis_error)
+export GDM_REQUIREMENT_VARS=(remote_url rev setup required_path_opt required_path_val rev_is hash tag branch to setup_hash register_parent  
+  register_id register_path required_path register_manifest register_snapshot prev_registered prev_registration_error)
 
 gdm_parseRequirement() {
   # gdm_parseRequirement parse argument for require or register and outputs complete details on the requirement, along
   # with information on previous registration, if found. It does not check for any installations beside the registration.
 
   # Input is the following arguments (same arguments as expected by gdm.require, optionally prepended with flags)
-  #     --(dis)?allow-lone [https://][<domain>/]<vendor>/<repo>[.git][#<hash|tag|branch>] [setup=<function>|<script_path>|cmd>] [<destin-flag>=<path>|<dirname>]
+  #     --(dis)?allow-lone [https://][<domain>/]<vendor>/<repo>[.git][#<hash|tag|branch>] [setup=<function>|<script_path>|cmd>] [<required_path_opt flag>=<required_path_val>]
   #  (1st arg is referred to here as $repo_identifier)
   # Output:
   #                                                                  BLANK? SETBY
-  #   remote_url=<expanded from repo_identifier, usualy lowercased)  never  expandRemoteRef 
-  #   rev=[<revision specfied after # in repo_identifier]            maybe  expandRemoteRef (currently unused)
-  #   rev_is=hash|tag|tag_pattern|branch                             never  expandRemoteRef (currently unused)
-  #   hash=<full_hash (lowercased) from repo_identifier>             never  expandRemoteRef
-  #   tag=[<full_tag not lowercased>]                                maybe  expandRemoteRef
-  #   branch=[<branch_name not lowercased>]                          maybe  expandRemoteRef
-  #   to=<name>|<normalized relpath>|<normalized abspath>            never  parseRequirement (currently unused)
-  #   destin_option=to|as|to-proj-as|to-fs-as|to-proj-in|to-fs-in    maybe  parseIfDesinationOption (currently unused)
-  #   destin_value=<value provided by user with destin_option>       maybe  parseIfDesinationOption (currently unused)
-  #   setup=[<executable value provided>]                            maybe  parseRequirement
-  #   setup_hash=[hash of setup if passed]                           maybe  parseRequirement
-  #   regis_parent_dir=$GDM_REGISTRY/domain/vendor/repo              never  parseRequirement
-  #   regis_id=$regis_prefix$regis_suffix                            never  parseRequirement
-  #   regis_instance=$regis_parent_dir/$regis_prefix$regis_suffix    never  parseRequirement 
-  #   destin_instance=<full abs path to location where required>     never  parseRequirement
-  #   regis_manifest=<full abs path to manifest file in registry>    no     parseRequirement
-  #   regis_snapshot=<full abs path to manifest file in registry>    no     parseRequirement
-  #   previously_registered=true|false                               never  parseRequirement
-  #   previous_regis_error=<GDM_ERRORS value>                        maybe NEW: if not previously registered, there is no error
+  #   remote_url=<expanded from repo_identifier, usualy lowercased)     never  expandRemoteRef 
+  #   rev=[<revision specfied after # in repo_identifier]               maybe  expandRemoteRef (currently unused)
+  #   rev_is=hash|tag|tag_pattern|branch                                never  expandRemoteRef (currently unused)
+  #   hash=<full_hash (lowercased) from repo_identifier>                never  expandRemoteRef
+  #   tag=[<full_tag not lowercased>]                                   maybe  expandRemoteRef
+  #   branch=[<branch_name not lowercased>]                             maybe  expandRemoteRef
+  #   required_path_opt=to|as|to-proj-as|to-fs-as|to-proj-in|to-fs-in   maybe  parseIfDesinationOption (currently unused)
+  #   required_path_val=<value provided by user with required_path_opt> maybe  parseIfDesinationOption (currently unused)
+  #   to=<name>|<normalized relpath>|<normalized abspath>               never  parseRequirement (currently unused)
+  #   required_path=<full abs path to location where required>          never  parseRequirement
+  #   setup_hash=[hash of setup if passed]                              maybe  parseRequirement
+  #   setup=[<executable value provided>]                               maybe  parseRequirement
+  #   register_parent=$GDM_REGISTRY/domain/vendor/repo                  never  parseRequirement
+  #   register_id=$regis_prefix$regis_suffix                            never  parseRequirement
+  #   register_path=$register_parent/$regis_prefix$regis_suffix         never  parseRequirement 
+  #   register_manifest=<full abs path to manifest file in registry>    no     parseRequirement
+  #   register_snapshot=<full abs path to manifest file in registry>    no     parseRequirement
+  #   prev_registered=true|false                                        never  parseRequirement
+  #   prev_registration_error=<GDM_ERRORS value>                        maybe NEW: if not previously registered, there is no error
 
   ################################# get flag arguments ##################################
   local lone_regis_flag="" # default will be to allow register to be the only instance
@@ -58,8 +58,8 @@ gdm_parseRequirement() {
   local remote_url rev rev_is hash tag branch # <- these are what output of gdm_expandRemoteRef assigns
   eval "$requirement" ; # all requirement vars are set but rev, branch, tag may be empty.
   
-  ####################### get setup and destination arguments ###########################
-  local setup destin_option destin_value to destin_instance 
+  ################# get setup and required path destination arguments #############################
+  local setup required_path_opt required_path_val to required_path 
   for arg in $@ ; do
     if [[ "${arg:l}" =~ '^-{0,2}(s|setup)[=].+' ]] ; then
       if ! [[ -z "$setup" ]] ; then gdm_multiArgError "$1" '`setup` arguments' ; return $? ; fi
@@ -67,17 +67,17 @@ gdm_parseRequirement() {
     elif ! destin_assignments="$(gdm_parseIfDesinationOption $arg)" ; then # don't add >&2
       return $invalid_argument # (All gdm_parseIfDesinationOption errors are $GDM_ERRORS[invalid_argument] with stderr)
     elif ! [[ -z "$destin_assignments" ]] ; then
-      if ! [[ -z "$destin_instance" ]] ; then
+      if ! [[ -z "$required_path" ]] ; then
         echo "$(_S R S)$repo_identifier has multiple destinations specified! (got $arg) $(_S)" >&2 ; return $invalid_argument
       fi
-      eval "$destin_assignments" # assigns: destin_option destin_value to destin_instance 
+      eval "$destin_assignments" # assigns: required_path_opt required_path_val to required_path 
     else echo "$(_S R S)Invalid argument: $arg$(_S)" >&2 ; return $invalid_argument
     fi
   done
-  if [[ -z "$destin_instance" ]] ; then # default destination:
+  if [[ -z "$required_path" ]] ; then # default required path destination:
     to="${remote_url:t:r}" # note that: repo_name="${remote_url:t:r}"
-    destin_instance="$PROJ_ROOT/$GDM_REQUIRED/${remote_url:t:r}" # set to repo name, within required dir
-    # destin_option destin_value are left empty as user did not provide any.
+    required_path="$PROJ_ROOT/$GDM_REQUIRED/${remote_url:t:r}" # set to repo name, within required dir
+    # required_path_opt required_path_val are left empty as user did not provide any.
   fi
   
   ###### set regis_suffix: get value and type of setup command and hash it #################################
@@ -102,57 +102,61 @@ gdm_parseRequirement() {
     regis_suffix="_setup-$setup_hash"
   fi
 
-  local regis_parent_dir="$GDM_REGISTRY/${${remote_url#*//}:r}" # set to $GDM_REGISTRY/domain/vendor/repo
+  local register_parent="$GDM_REGISTRY/${${remote_url#*//}:r}" # set to $GDM_REGISTRY/domain/vendor/repo
   local regis_prefix="$tag" ; [[ -z "$regis_prefix" ]] && regis_prefix=$hash[1,$GDM_MIN_HASH_LEN] 
   # NOTE: when regis_prefix is a hash, it is an estimate that may need elongation (done later in this function)
   # [[ -z "$regis_prefix" ]] && return 64 #TODO: what was this??
 
-  local regis_id="$regis_prefix$regis_suffix"
-  local regis_instance="$regis_parent_dir/$regis_id" 
+  local register_id="$regis_prefix$regis_suffix"
+  local register_path="$register_parent/$register_id" 
 
   local manifest_found=false
 
-  if [[ -d "$regis_parent_dir" ]] ; then
+  if [[ -d "$register_parent" ]] ; then
     # Expand Hash to be long enough to not clash 
     if [[ -z $tag ]] ; then
       local hash_backup="$hash"
       local found_hash
       for len in {$#regis_prefix..$#hash} ; do
         regis_prefix="$hash[1,$len]"
-        regis_id="$regis_prefix$regis_suffix"
+        register_id="$regis_prefix$regis_suffix"
 
-        if [[ -f "$regis_parent_dir/$regis_id/$regis_id.$GDM_MANIF_EXT" ]] ; then 
-          found_hash=$(source "$regis_parent_dir/$regis_id/$regis_id.$GDM_MANIF_EXT" && echo "$hash") || break
+        if [[ -f "$register_parent/$register_id/$register_id.$GDM_MANIF_EXT" ]] ; then 
+          found_hash=$(source "$register_parent/$register_id/$register_id.$GDM_MANIF_EXT" && echo "$hash") || break
           if [[ $found_hash == $hash ]] ; then  manifest_found=true ; break ; fi
           # else # doesn't match so we need a longer short hash (regis_prefix)
         else  break # missing, so we can use this short hash (regis_prefix)
         fi
       done
       hash="$hash_backup"
-    elif [[ -f "$regis_parent_dir/$regis_id/$regis_id.$GDM_MANIF_EXT" ]] ; then manifest_found=true
+    elif [[ -f "$register_parent/$register_id/$register_id.$GDM_MANIF_EXT" ]] ; then manifest_found=true
     fi
   fi
 
-  regis_instance="$regis_parent_dir/$regis_id" #TODO: this was commented (was previously local). Problem to uncomment?? 
-  local regis_manifest="$regis_instance/$regis_id.$GDM_MANIF_EXT"
-  local regis_snapshot="$regis_instance.$GDM_SNAP_EXT"
+  register_path="$register_parent/$register_id" #TODO: this was commented (was previously local). Problem to uncomment?? 
+  local register_manifest="$register_path/$register_id.$GDM_MANIF_EXT"
+  local register_snapshot="$register_path.$GDM_SNAP_EXT"
 
-  local previously_registered=false
-  local previous_regis_error
+  local prev_registered=false
+  local prev_registration_error
+
+  
 
   if $manifest_found ; then
-    previously_registered=true
-    local manif_valid_assigns="$(gdm_echoVars $GDM_MANIF_VALIDATABLES)" 
-
-    gdm_validateInstance $lone_regis_flag $regis_manifest $regis_instance $regis_snapshot "$manif_valid_assigns" $GDM_MANIF_VALIDATABLES #FUNCTION CALL: gdm_validateInstance
-    previous_regis_error=$?
+    prev_registered=true
+    echo "HERE" >&2 #TEST
+    local manif_valid_assigns="$(gdm_echoVars --local $GDM_MANIF_VALIDATABLES)"  #TODO: I made this local. Still working??
+    gdm_validateInstance --register $lone_regis_flag $register_manifest $register_path $register_snapshot "$manif_valid_assigns" $GDM_MANIF_VALIDATABLES #FUNCTION CALL: gdm_validateInstance
+    prev_registration_error=$?
   
-  elif [[ -d "$regis_instance" ]] ; then
-    previously_registered=true #TODO: add this? (it was left false here before and I think true was flag indicating VALID regis )
-    previous_regis_error=$GDM_ERRORS[manifest_missing]
+  elif [[ -d "$register_path" ]] ; then
+    prev_registered=true #TODO: add this? (it was left false here before and I think true was flag indicating VALID regis )
+    prev_registration_error=$GDM_ERRORS[register_manifest_missing] 
   else
-    previously_registered=false 
+    prev_registered=false 
   fi
+
+  
 
   gdm_echoVars $outputVars 
   return 0
