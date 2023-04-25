@@ -93,16 +93,42 @@ gdm_gitExpandRemoteUrl() {
   echo "$remote_url" ; return 0
 }
 
-gdm_parseIfDesinationOption() {
-  # To be called in loop iterating each argument to require that may be and option to set the install detination.
 
+# gdm_parseIfSetupOption() {
+  # To be called in loop iterating each argument to gdm.require that may be and option to set the setup function.
+  # Return: 
+  #     Return is only failing if the option passed is a valid destination option flag but has an invalid value.
+  #     Lack of output indicates that the option passed not a destination option.
+  # Input / Output:
   # IF $1 is an install destination option and is without error, return is 0 and output is assignments of:
   #     required_path_opt   # option passed by user (their argument, up and not including first = )
-  #     required_path_val    # value passed by user  (their argument, after first = )
-  #     to              # the install path that would appear after `to=` (name | abs path | relpath starting ../ or ./))
+  #     required_path_val   # value passed by user  (their argument, after first = )
+  #     to                  # the install path that would appear after `to=` (name | abs path | relpath starting ../ or ./))
   #     required_path # complete absolute path to install requirement to
   # ELIF $1 is an install destination option with an error, return is $GDM_ERRORS[invalid_argument] and the error is output to stderr 
   # ELSE $1 is not an install detination option, return is 0 and output is empty
+  # Usage: place in loop as 
+  #     if ! destin_assignments="$(gdm_parseIfDesinationOption $arg)" ; then return $?
+  #     elif ! [[ -z "$destin_assignments" ]] ; then
+  #       local to required_path ; eval "$destin_assignments"  # then do something with them
+
+# }
+
+
+gdm_parseIfDesinationOption() {
+  # To be called in loop iterating each argument to gdm.require that may be and option to set the install detination.
+  # Return: 
+  #     Return is only failing if the option passed is a valid destination option flag but has an invalid value.
+  #     Lack of output indicates that the option passed not a destination option.
+  # Input / Output:
+  # IF $1 is an install destination option and is without error, return is 0 and output is assignments of:
+  #     required_path_opt   # option passed by user (their argument, up and not including first = )
+  #     required_path_val   # value passed by user  (their argument, after first = )
+  #     to                  # the install path that would appear after `to=` (name | abs path | relpath starting ../ or ./))
+  #     required_path # complete absolute path to install requirement to
+  # ELIF $1 is an install destination option with an error, return is $GDM_ERRORS[invalid_destination_arg] and the error is output to stderr 
+  # ELSE $1 is not an install detination option, return is 0 and output is empty
+
   # Usage: place in loop as 
   #     if ! destin_assignments="$(gdm_parseIfDesinationOption $arg)" ; then return $?
   #     elif ! [[ -z "$destin_assignments" ]] ; then
@@ -141,10 +167,10 @@ gdm_parseIfDesinationOption() {
       required_path_opt="as"
       required_path_val="${arg#*=}"
       if ! gdm_isNonPathStr "$required_path_val" ; then  # TODO: perhaps allow dir/subdir (just prevent starting with ../ ./ or /)
-        echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\" Value must be a directory name and not a path!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument]
+        echo "$(_S R S)Invalid destination argument: $required_path_opt=\"$required_path_val\" Value must be a directory name and not a path!$(_S)" >&2  ; return $GDM_ERRORS[invalid_destination_arg]
       fi
       to="$required_path_val"
-      required_path="$PROJ_ROOT/$GDM_REQUIRED/$required_path_val"
+      required_path="$GDM_PROJ_ROOT/$GDM_REQUIRED/$required_path_val"
       gdm_echoVars $outputVars
     fi
   else # flexible_required_paths experimental mode enabled....
@@ -166,7 +192,7 @@ gdm_parseIfDesinationOption() {
         echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\" Value must be a directory name and not a path!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument]
       fi
       to="$required_path_val"
-      required_path="$PROJ_ROOT/$GDM_REQUIRED/$required_path_val"
+      required_path="$GDM_PROJ_ROOT/$GDM_REQUIRED/$required_path_val"
       gdm_echoVars $outputVars
 
     elif [[ "${arg:l}" =~ '^-{0,2}to-(proj|home|fs)-(in|as)[=].+' ]] ; then 
@@ -189,7 +215,7 @@ gdm_parseIfDesinationOption() {
       # SET OUTPUT VARIABLE: required_path
       local val_target="$required_path_val" ; [[ "${arg:l}" =~ '^to-(proj|fs)-in' ]] && val_target+="/$repo_name"
 
-      if ! required_path="$(abspath $val_target $PROJ_ROOT 2>&1)" ; then
+      if ! required_path="$(abspath $val_target $GDM_PROJ_ROOT 2>&1)" ; then
         echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\"  $required_path$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       fi
 
@@ -197,8 +223,8 @@ gdm_parseIfDesinationOption() {
       if [[ -f $val_target ]] || [[ -f $required_path ]] ; then
         echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\" (path resolves to or includes an existing file) $(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       fi
-      local target_relto_proj="$(gdm_dirA_relto_B $required_path $PROJ_ROOT t p)" 
-      local target_relto_req="$(gdm_dirA_relto_B $required_path $PROJ_ROOT/$GDM_REQUIRED t r)"
+      local target_relto_proj="$(gdm_dirA_relto_B $required_path $GDM_PROJ_ROOT t p)" 
+      local target_relto_req="$(gdm_dirA_relto_B $required_path $GDM_PROJ_ROOT/$GDM_REQUIRED t r)"
       if [[ "$target_relto_proj" == 't is p' ]] ; then # possible values:  "t contains p"  "t is contained by p"  "t is p"  "t has no relation to p" 
         echo "$(_S R S)Invalid argument: $required_path_opt=\"$required_path_val\" Value cannot be project root$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
       elif [[ "$target_relto_proj" == 't is contained by p' ]] && [[ "${arg:l}" == 'to-fs-'* ]] ; then 
@@ -213,7 +239,7 @@ gdm_parseIfDesinationOption() {
       local to
       if [[ "${arg:l}" == 'to-fs-'* ]] ; then to="$required_path"
       else # set to to normalized relative path
-        if ! to="$(relpath $required_path $PROJ_ROOT 2>&1)" ; then 
+        if ! to="$(relpath $required_path $GDM_PROJ_ROOT 2>&1)" ; then 
           echo "$(_S R S)Invalid argument: $arg $to$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument]
         fi
       fi
@@ -223,13 +249,11 @@ gdm_parseIfDesinationOption() {
     fi
   fi
   return 0
-
-
 }
 
 
 # TODO: perhaps allow dir/subdir (just prevent starting with ../ ./ or /)
-gdm_isNonPathStr() {  # used in  helpers: gdm_parseRequirement  
+gdm_isNonPathStr() {  # used in  helpers: gdm.parseRequirement  
   # if string contains only . and / characters or it contains any /, it's a path so it fails
   # (whether it exists or not) This also fails if passed string with * or ~ because path expansion
   [[ "$1" =~ '^[.]*$' ]] || test "${1//\//}" != "$1" && return 1 || return 0

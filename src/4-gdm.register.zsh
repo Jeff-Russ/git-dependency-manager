@@ -5,14 +5,12 @@ gdm.register() {
   # Input: $1 is assigments of remote_url hash setup register_manifest register_path register_snapshot register_parent register_id required_path
   # Needed: GDM_VERSION GDM_MANIF_VARS GDM_SNAP_EXT destructured GDM_ERRORS
 
-  local force_re_register=false
-
-  local force_reregister_lone_flag="" 
+  local unlinked_regis_flag="--allow-unlinked-register" # allow
   local dry_run=false # If true, gdm.register can be used as a visual front end for a dry run of parseRequirement
-
-  local lone_regis_flag="--allow-lone-register"
-  while [[ "$1" =~ '^--' ]] ; do
-    if  [[ "$1" =~ '^--(force-re-register|force)$' ]] ; then force_reregister_lone_flag="$1" force_re_register=true ; shift
+  
+  while [[ "$1" =~ '^--.+' ]] ; do
+    if  [[ "$1" == --re-register-unlinked ]] ; then unlinked_regis_flag="--disallow-unlinked-register" ; shift
+    elif  [[ "$1" == --re-register-unlinked=false ]] ; then unlinked_regis_flag="--allow-unlinked-register" ; shift
     elif [[ "$1" =~ '^--dry-run$' ]] ; then dry_run=true ; shift 
     # possibly add more options here, later on
     else break
@@ -31,11 +29,10 @@ gdm.register() {
 
   ###### PARSE REQUIREMENT ########################################################################
   local requirement requirement_error
-  requirement="$(gdm_parseRequirement $@)" ; requirement_error=$? #FUNCTION CALL: gdm_parseRequirement
+  requirement="$(gdm.parseRequirement $unlinked_regis_flag $@)" ; requirement_error=$? #FUNCTION CALL: gdm.parseRequirement
   ((requirement_error==invalid_argument)) && return $invalid_argument ;
   local $GDM_REQUIREMENT_VARS ;  eval "$requirement"
   
-
   ###### INFORMAIONAL OUTPUT (TO stderr TO KEEP stdout CLEAR FOR outputVars) ######################
   if $prev_registered ; then
     echo "$(_S D S E)Validating previous registration for $@ in ${register_path//$GDM_REGISTRY\//} ...$(_S)" >&2
@@ -45,9 +42,10 @@ gdm.register() {
     elif ((prev_registration_error==register_manifest_missing)) ; then 
       echo "$(_S M)Generating new registration.$(_S) Reason: previous register_manifest not found in \$GDM_REGISTRY" >&2
     elif ((prev_registration_error==register_manifest_unlinked)) ; then 
-      echo "$(_S M)Generating new registration.$(_S) Reason: $force_reregister_lone_flag was passed and previous register has no required instances" >&2
+      echo "$(_S M)Generating new registration.$(_S) Reason: $unlinked_regis_flag was passed and previous register has no required instances" >&2
     else
-      echo "$(_S M)Re-generating registration.$(_S) Reason: $(gdm_keyOfMapWithVal GDM_ERRORS $prev_registration_error)" >&2
+      local disp_err="$(gdm_keyOfMapWithVal GDM_ERRORS $prev_registration_error)" ; [[ -z $disp_err ]] && disp_err=$prev_registration_error
+      echo "$(_S M)Re-generating registration for $@$(_S) Reason: Previously registration returned error: $disp_err" >&2
     fi
   else echo "$(_S M)Generating new registration for $@$(_S) Reason: not previously registered." >&2
   fi

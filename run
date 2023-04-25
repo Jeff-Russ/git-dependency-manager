@@ -96,13 +96,11 @@ setGDM () {
 
 }
 
-
 # Show all functions starting with gdm and all variables starting GDM_
-show.gdm() { echo "gdm* function:" ; print -l ${(ok)functions} | grep -E '^gdm' ; env | grep -E '^GDM' ;  }
-
+show.gdm() { echo "  gdm* functions:" ; print -l ${(ok)functions} | grep -E '^gdm' ; echo "  GDM* env vars:" ; env | grep -E '^GDM' ;  }
 
 # unfunction all functions starting with gdm and unset all variable starting GDM_
-unload.gdm() { unfunction -m gdm "gdm.*" ; unset -m "GDM_*" ; }
+unload.gdm() { unfunction -m gdm "gdm.*" "gdm_*" ; unset -m "GDM_*" ; }
 
 _export_SRC_FILES() {
   _ifNonSourceNoExportWarn "$_RUN" $0 $@ || return $?

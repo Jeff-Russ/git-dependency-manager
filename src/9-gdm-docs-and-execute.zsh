@@ -138,5 +138,12 @@ CONFDOC
 }
 
 ######## EXECUTE ##################################################################################
+SOURCE_GDM=false # Test mode: allow sourcing by not unsetting/unfunctioning everything after call
+if [[ "$1" == --source ]] ; then SOURCE_GDM=true ; shift ; fi
 
 gdm "$@" 
+
+if ! $SOURCE_GDM ; then 
+  # Prevent calling of any functions directly without executing the GDM_SCRIPT and prevent stale env vars
+  unfunction -m gdm "gdm.*" "gdm_*" ; unset -m "GDM_*" ;
+fi

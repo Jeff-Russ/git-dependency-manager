@@ -2,17 +2,20 @@
 
 ## Current Commit
 
-#### rename a lot, start project awareness in gdm.require: call gdm.project and define pack function
+#### Continue project awareness with parseConfig + various other minor changes
 
 IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** list is a change made in the current commit: subsequent commits must have them deleted from this list and added to the top of the **Past Commits** list
 
-- [ ] Change var/flag/function/file names: 
-  - [x] destin_instance -> required_path, regis_instance -> register_path, previously_registered -> prev_registered, previous_regis_error -> prev_registration_error, regis_id -> register_id, regis_manifest -> register_manifest, regis_snapshot -> register_snapshot, regis_parent_dir -> register_parent, 2-gdm.init.zsh -> 2-gdm.project.zsh gdm.loadProject() ->  gdm.project()  (and more in GDM_ERRORS as see in comment in `1-gdm.zsh`)
+- [x] For testing add a `--source` option to bypass blocking of sourcing.
+- [x] Create an `gdm_ask` helper: we'll probably need it later to verify certain actions with users.
+- [x] In `gdm.parseRequirement`, change default `to` value to use same capitalization used by user in specifying repository.
+- [x] Modify `gdm_validateInstance` to output (stdout) each `${mode}_manifest_requirement_mismatch` 
+- [x] Update calls to  `gdm_validateInstance`  to `show_output` from `git diff` and `*_manifest_requirement_mismatch`
+- [x] Modify `gdm_validateInstance`  (and `GDM_ERRORS`) to  look for errors in a more better sequence: generally putting more recoverable errors first (and minor errors last) but also checking for errors which would better explain other errors first.
+- [ ] Start a `gdm.parseConfig` function within `gdm.project` to sort out `config` and `config_lock` before requiring. ==TODO==: finish this
 - [ ] To gdm.require:
-  - [ ] Add project awareness 
-    - [x] ensure gdm.project is/has been called 
   - [ ] implement config/config_lock to (when called via config or directly in user shell):
-    - [x] make a pack function to help in comparing large sets of variables
+    - [ ] add to config_lock when upon first requiring
     - [ ] prevent requirements that have the same required_path as a previous requirement found on FS or in config/config_lock 
     - [ ] add to both config and config lock newly required only if they don't override require paths of different requirements.
 - [ ] gdm_echoAndExec
@@ -30,6 +33,7 @@ IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** lis
   - [ ] `$GMD registry --rm-unrequired`   remove registers without required instances
   - [ ] `$GDM required --list` list (per line) `$destin_instance vendor/reponame#$rev setup=$setup` for each installed requirement.
   - [ ] `$GDM required --info $destin_instance` show contents of manifest for installed requirement.
+  - [ ] `$GDM project --mv $to` to help move a project that has requirements outside project root (with warning prompts) (and update `proj_paths_lock` once it is implemented)
 - [ ] Mention in some documentation that setup function can be used to export the destination path to env vars. 
 
 
@@ -38,6 +42,14 @@ IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** lis
 ## Past Commits
 
 This list is in reverse order: Items on top are changed made in most recent to the current commit (but not the current commit).
+
+IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** list is a change made in the current commit: subsequent commits must have them deleted from this list and added to the top of the **Past Commits** list
+
+#### rename a lot, start project awareness in gdm.require: call gdm.project and define pack function
+
+* Renames: destin_instance -> required_path, regis_instance -> register_path, previously_registered -> prev_registered, previous_regis_error -> prev_registration_error, regis_id -> register_id, regis_manifest -> register_manifest, regis_snapshot -> register_snapshot, regis_parent_dir -> register_parent, 2-gdm.init.zsh -> 2-gdm.project.zsh gdm.loadProject() ->  gdm.project()  (and more in GDM_ERRORS as see in comment in `1-gdm.zsh`)
+* Start to add project awareness: ensure gdm.project is/has been called 
+* Make a pack function to help in comparing large sets of variables
 
 #### General cleanup, notably: gdm_parseRequirement and gdm.require in/out
 

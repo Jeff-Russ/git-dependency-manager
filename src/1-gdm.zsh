@@ -36,24 +36,6 @@
 export GDM_SCRIPT="$0"
 export GDM_VERSION="1.0beta"
 export GDM_VER_COMPAT="1.0"
-export GDM_REGISTRY="${GDM_REGISTRY:=$HOME/.gdm_registry}" # might have been defined in environment
-export GDM_REQUIRED="${GDM_REQUIRED:=gdm_required}"         # can be overridden by $GDM_REQUIRE_CONF file
-export GDM_REQUIRE_CONF="gdm.zsh" 
-export GDM_CONFIG_LOCKVARS=(to remote_url hash tag setup_hash) # IN ORDER
-# export GDM_REQUIRED_LOCK="${GDM_REQUIRED_LOCK:=gdm_require.lock}"
-
-# environment variables used in require and register:
-export GDM_MANIF_EXT="gdm_manifest"
-export GDM_MANIF_VARS=(gdm_manifest_inode gdm_version register_path remote_url hash tag setup_hash)
-export GDM_MANIF_VALIDATABLES=(register_path remote_url hash tag setup_hash)
-# used only in register:
-export GDM_SNAP_EXT="gdm_snapshot"
-
-# used only in gdm_parseRequirement:
-export GDM_MIN_HASH_LEN=7 
-
-# NOTE: additional exported variables are in *-gdm-project.zsh
-
 
 declare -Ag GDM_ERRORS=(
   # RENAMED GDM_ERRORS keys:
@@ -70,35 +52,41 @@ declare -Ag GDM_ERRORS=(
   #   snapshot_check_mismatch -> register_was_modified  AND required_was_modified
   #   regis_snapshot_missing -> register_snapshot_missing
 
-  [gdm_version_outdated]=5 # retained for user checking (see below in this)
+  # Special case / Broadly used error codes (add downward, starting with 9): 
+  [gdm_version_outdated]=8 # retained for user checking (see below in this)
+  [invalid_argument]=9    # returned from parseRequirement, parseRequirement via gdm.register and directly from gdm.register
 
-  # gdm_parseRequirement errors:
+  # gdm.parseRequirement and additional gdm.register errors:
   [cannot_expand_remote_url]=11
   [cannot_find_revision]=12
   [cannot_find_branch]=13
   [cannot_find_tag]=14
   [cannot_find_hash]=15
-  [invalid_argument]=16
-
+  [invalid_destination_arg]=16
+  [multiple_destination_args]=17
+  [multiple_setups_args]=18
 
   # gdm_validateInstance errors (evaluted in order except for register_snapshot_missing which happens in either mode)
+  #      If gdm_validateInstance is passed --register
   [register_instance_missing]=21              # $register_path directory does not exist
   [register_manifest_missing]=22              # $register_manifest file does not exist 
-  [register_manifest_unlinked]=23             # --disallow-lone (not the default) and $register_manifest has no hardlinks
-  [register_manifest_inode_mismatch]=23       # $register_manifest file's inode does not match what the file says it is
-  [register_manifest_version_outdated]=25     # $register_manifest gdm_version does not start with GDM_VER_COMPAT
-  [register_manifest_requirement_mismatch]=26 # if certain $register_manifest variables mismatch requirement
-  [register_snapshot_gitswap_failed]=27       # cannot swap $register_path/.git to or from $register_path.gdm_snapshot/.git
-  [register_was_modified]=28                  # if $register_path code mismatches snapshot
-  [register_snapshot_missing]=30              # (NO MATTER gdm_validateInstance IS PASSED --register OR --required)
+  [register_manifest_requirement_mismatch]=23 # (has output of all) $register_manifest variables mismatching requirement
+  [register_snapshot_gitswap_failed]=24       # (unrecoverable) cannot swap $register_path/.git to or from $register_path.gdm_snapshot/.git
+  [register_was_modified]=25                  # (has diff output) $register_path code mismatches snapshot
+  [register_manifest_inode_mismatch]=26       # $register_manifest file's inode does not match what the file says it is
+  [register_manifest_version_outdated]=27     # $register_manifest gdm_version does not start with GDM_VER_COMPAT
+  [register_manifest_unlinked]=28             # --disallow-unlinked (not the default) and $register_manifest has no hardlinks
+  #      If gdm_validateInstance is passed --required or --required
+  [register_snapshot_missing]=30              # Checked between 23 and 24 as well as between 33 and 34
+  #      If gdm_validateInstance is passed --required
   [required_instance_missing]=31              # $required_path directory does not exist
   [required_manifest_missing]=32              # $required_manifest file does not exist
-  [required_manifest_unlinked]=33             # --disallow-lone (not the default) and $required_manifest has no hardlinks
-  [required_manifest_inode_mismatch]=34       # $register_manifest file's inode does not match what the file says it is
-  [required_manifest_version_outdated]=35     # $required_manifest gdm_version does not start with GDM_VER_COMPAT
-  [required_manifest_requirement_mismatch]=36 # certain $required_manifest variables mismatch requirement
-  [required_snapshot_gitswap_failed]=37       # cannot swap $required_path/.git to or from $required_path.gdm_snapshot/.git
-  [required_was_modified]=38                  # $required_path code mismatches snapshot
+  [required_manifest_requirement_mismatch]=33 # (has output of all) $required_manifest variables mismatching requirement
+  [required_snapshot_gitswap_failed]=34       # (unrecoverable) cannot swap $required_path/.git to or from $required_path.gdm_snapshot/.git
+  [required_was_modified]=35                  # (has diff output) $required_path code mismatches snapshot
+  [required_manifest_inode_mismatch]=36       # $register_manifest file's inode does not match what the file says it is
+  [required_manifest_version_outdated]=37     # $required_manifest gdm_version does not start with GDM_VER_COMPAT
+  [required_manifest_unlinked]=38             # --disallow-unlinked (not the default) and $required_manifest has no hardlinks
 
   # gdm.register errors:
   [clone_failed]=41 
@@ -119,45 +107,103 @@ declare -Ag GDM_ERRORS=(
   [mkdir_GDM_REQUIRED_failed]=65
   [hardlink_failed]=66
   [no_project_found]=67
+  [destination_already_required_to]=68 # a previous requirement had the same destination
 
   [left_corrupted]=91
   [gdm_error_code_misread]=92
+  
+  [unexpected_error]=99
 )
 
 gdm.error() { echo "${(k)GDM_ERRORS[(r)$1]}" ; } # reverse lookup return error codes (GDM_ERRORS)
 
+# # PRE-FULLY-SOURCING EXECUTION SHORTCUT:
+# if (($#==0)) ; then
+#   local show_gdm_as=\$GDM_SCRIPT
+#   [[ $GDM == $GDM_SCRIPT ]] && show_gdm_as=\$GDM
+#   echo "$show_gdm_as requires arguments!" >&2 #TODO: show usage doc
+#   return 127 #TODO: this is an experimental approach: prevent sourcing by returning if called without args
+#   # Reason? to lock down functions from being called from the shell and force all execution via $GDM or ./$GDM_REQUIRE_CONF
+# elif (($#==1)) && [[ "$1" =~ '^-' ]] ; then
+#   if [[ "$1" =~ '^(--version|-v)$' ]] ; then
+#     echo "$GDM_VERSION" ; return 0
+#   elif [[ "$1" =~ '^--compat=.+' ]] ; then
+#     ! [[ "${1[10,-1]}" =~ "^$GDM_VER_COMPAT.*" ]] && return $GDM_ERRORS[gdm_version_outdated]
+#     return 0
+#   fi
+# fi
+
+export GDM_REGISTRY="${GDM_REGISTRY:=$HOME/.gdm_registry}" # might have been defined in environment
+export GDM_REQUIRED="${GDM_REQUIRED:=gdm_required}"         # can be overridden by $GDM_REQUIRE_CONF file
+export GDM_REQUIRE_CONF="gdm.zsh" 
+export GDM_CONFIG_LOCKVARS=(to remote_url hash tag hash setup_hash setup) # IN ORDER
+# export GDM_REQUIRED_LOCK="${GDM_REQUIRED_LOCK:=gdm_require.lock}"
+
+# environment variables used in require and register:
+export GDM_MANIF_EXT="gdm_manifest"
+export GDM_MANIF_VARS=(gdm_manifest_inode gdm_version register_path remote_url hash tag setup_hash)
+export GDM_MANIF_VALIDATABLES=(register_path remote_url hash tag setup_hash)
+# used only in register:
+export GDM_SNAP_EXT="gdm_snapshot"
+
+# used only in gdm.parseRequirement:
+export GDM_MIN_HASH_LEN=7 
+
+# NOTE: additional exported variables are in *-gdm-project.zsh
+
 # currently accepted GDM_EXPERIMENTAL element values: (NOTE: ALL ARE VERY DANGEROUS TO FILESYSTEM)
 # flexible_required_paths     (allow require installation destinations outside of project's GDM_REQUIRED dir)
 # any_required_path     (allow project's GDM_REQUIRED dir to be in any location)
-if [[ "$(gdm_typeof GDM_EXPERIMENTAL)" =~ 'array' ]] ; then
+if [[ "$(print -rl -- ${(t)GDM_EXPERIMENTAL} 2>/dev/null)" =~ 'array' ]] ; then
     export GDM_EXPERIMENTAL # user has provided so just export to be safe
-else export GDM_EXPERIMENTAL=() # add experiemental modes to always enable if use did not specify
-fi
-
-# echo "GDM header got $# args: $@"
-
-# PRE-FULLY-SOURCING EXECUTION SHORTCUT:
-if (($#==1)) && [[ "$1" =~ '^-' ]] ; then
-  if [[ "$1" =~ '^(--version|-v)$' ]] ; then
-    echo "$GDM_VERSION" ; return 0
-  elif [[ "$1" =~ '^--compat=.+' ]] ; then
-    ! [[ "${1[10,-1]}" =~ "^$GDM_VER_COMPAT.*" ]] && return $GDM_ERRORS[gdm_version_outdated]
-    return 0
-  fi
+else export GDM_EXPERIMENTAL=() # add experiemental modes to always enable if user does not specify
 fi
 
 # CALLED AFTER EVERYTHING IS SOURCED:
 gdm() {
-  echo "$(_S B)$0 $@$(_S)" #TEST
+  # echo "$(_S B)$0 $@$(_S)" #TEST
 
-  (($#==0)) && { echo "$(_S Y)gdm called without arguments$(_S)" >&2 ; return 127 ; }
+  if (($#==0)) ; then
+    echo "$(_S Y)gdm requires arguments!$(_S)" >&2 #TODO: show usage doc
+    return 127
+  fi
 
+  # local operations_wo_proj=(error) # TODO allow these operations to be called without project 
+  GDM_CALL_ARGS=("$@")
   local operation="$1"
   shift
+  
+  
+  if [[ "$operation" =~ '^[-]{0,2}init(ialize)?$' ]] ; then 
+    gdm.project --init $@  ; return $?
+  elif [[ "$operation" =~ '^proj(ect)?$' ]] && [[ "$1" =~ '^[-]{0,2}init(ialize)?$' ]] ; then 
+    shift ; gdm.project --init $@  ; return $?
+  fi
+
+  #NOTE: Add all operations we allow to run without a project here:
+  local non_proj_operations=(register project)
+
+  # Ensure we run gdm.project for all operations requiring a project (i.e. are not in non_proj_operations)
+  if ! (($non_proj_operations[(Ie)$operation])) ; then
+    local proj_err
+    # DO NOT execute gdm.project in subshell i.e. capture
+    gdm.project --traverse-parents --validate-version --validate-script #FUNCTION CALL: gdm.register
+    proj_err=$? #TODO: but should we: gdm.project init ??
+
+    # echo "GDM_PROJ_VARS:" ; print -l $GDM_PROJ_VARS #TEST
+
+    # if ((proj_err)) ; then  #TODO: or should we let them know to init??
+
+    #   echo "gdm.project returned $proj_err ($(gdm.error $proj_err))" #TEST
+    #   return $? 
+    # fi
+  fi
+  
+
 
   if [[ "$operation" == 'config' ]] ||  [[ "$operation" == 'install' ]] ; then
     echo "$operation called"  #TEST
-    if [[ -z "$PROJ_ROOT" ]] ; then
+    if [[ -z "$GDM_PROJ_ROOT" ]] ; then
       local err_code
       echo "calling gdm.project" #TEST
       # DO NOT execute gdm.project in subshell i.e. capture
@@ -165,7 +211,7 @@ gdm() {
       err_code=$?
       echo "gdm.project returned $err_code" #TEST
       ((err_code)) && return $? 
-    else echo "$(_S Y)PROJ_ROOT was not empty!$(_S)"  #TEST
+    else echo "$(_S Y)GDM_PROJ_ROOT was not empty!$(_S)"  #TEST
     fi
     # gdm_echoProjVars #TEST
 
@@ -178,8 +224,8 @@ gdm() {
       fi
 
     
-    elif (($#PROJ_CONFIG_ARRAY==0)) ; then
-      if (($#PROJ_LOCK_ARRAY>0)) ; then
+    elif (($#GDM_PROJ_CONFIG_ARRAY==0)) ; then
+      if (($#GDM_PROJ_LOCK_ARRAY>0)) ; then
         echo "TO BE IMPLEMENTED: removal of project requirements with user check" ; return 0
       else echo "$(_S Y)Nothing to install!$(_S)" >&2 ; return 1
       fi
@@ -187,16 +233,16 @@ gdm() {
     # NORMAL PROJECT 'install'/'config' MODE: iterating over config array to require each:
     else
       echo "NORMAL MODE" #TEST
-      # PROJ_CONFIG_IDX=0
-      # for requirement in "${PROJ_CONFIG_ARRAY[@]}" ; do
-      #   ((++PROJ_CONFIG_IDX))
+      # GDM_PROJ_CONFIG_IDX=0
+      # for requirement in "${GDM_PROJ_CONFIG_ARRAY[@]}" ; do
+      #   ((++GDM_PROJ_CONFIG_IDX))
       #   local require_args ; eval "require_args=( $requirement )" ; gdm.require "${require_args[@]}" 
       # done
     fi
   
   # METHOD CALL MODE:
   elif [[ "$(gdm_typeof gdm.$operation)" =~ 'function' ]] ; then
-    echo "gdm is executing gdm.$operation $@"
+    echo "gdm is executing gdm.$operation $@" #TEST
     gdm.$operation "$@" 
     return $?
 

@@ -72,6 +72,28 @@ function _S() { # S for STYLE
   print "${seq[1,-2]}m" # remove last ; and append m
 }
 
+gdm_ask () {
+  if [ "$1" = "--help" ] ; then
+    ask --help
+    return 0
+  fi
+  while true ; do
+    local prmpt="y/n" ; local deflt= ; local reply= 
+    if [ "${2:-}" = "Y" ] ; then prmpt="Y/n" ; deflt="Y" 
+    elif [ "${2:-}" = "N" ] ; then prmpt="y/N" ;  deflt="N" 
+    fi
+    read -k "reply?$1 [$prmpt] " < /dev/tty
+    if [[ $reply = *[$' \t\n']* ]]
+    then reply=$deflt 
+    else printf "\n"
+    fi
+    case "$reply" in
+      (Y* | y*) return 0 ;;
+      (N* | n*) return 1 ;;
+      (*) printf "Invalid reply!\n" ;;
+    esac
+  done
+}
 
 gdm_typeof() {
   if [[ -z "$1" ]] || [[ "$1" == --help ]] ; then
@@ -129,6 +151,7 @@ USAGEDOC
   esac
 
   if eval "(( \${+$1} ))" 2>/dev/null ; then  # if a variable... get type
+    # the following two lines are, if we knew the var was called var, equiv to: print -rl -- ${(t)var}
     local operand='${(t)'"$1"'}'
     local vartype="$(eval "print -rl -- $operand" 2>/dev/null)"
     if ! [[ -z "$vartype" ]] ; then
@@ -411,4 +434,71 @@ function relpath(){
   done
   relative+=${relative:+${appendix:+/}}${appendix#/} # append to relative: '/' if relative AND appendix are non-null + $appendix w/o any leading /
   print $relative
+}
+
+
+gdm_autoRename() {
+  # gdm_autoRename to automatically prevent any overwrites in renaming or moving a file or directory
+  #                by automatically generating a new name, without output of the new name if non-failing.
+  # Usage:
+  #    gdm_autoRename [--mv|--cp] $dir_or_file [$rename_tmpl] [$rename_numered_tmpl]
+  # Args:
+  #    --mv | --cp          (optional) defaults to --mv (rename) whereas --cp renames, keeping original
+  #    $dir_or_file         (required) existing file or directory as a relative or absolute path
+  #    $rename_tmpl         (optional) string template which can reference the original filename (w/o ext) as $name
+  #    $rename_numered_tmpl (optional) extra template used when first results in existing file which also 
+  #                         can reverence the original (w/o ext) as $name but also MUST reference $n, which 
+  #                         will be incremented until resulting string does not exist in the filesyatem
+  # Examples:
+  #    gdm_autoRename --mv item.ext
+  #    gdm_autoRename item.ext
+  #                                       item.ext (a file or directory) is renamed (moved) to 
+  #                                       item-backup.ext or, if that exists, item-backup-2.ext or, 
+  #                                       if that exists, item-backup-3.ext etc
+  #    gdm_autoRename --cp item.ext 
+  #                                       Same as previous but original is kept 
+  #    gdm_autoRename --mv item.ext '$name.bak'
+  #    gdm_autoRename item.ext '$name.bak'
+  #                                      Renamed to item.bak.ext or, if that exists, item.bak-2.ext, etc
+  #    gdm_autoRename --cp item.ext '$name.bak'
+  #                                      Same as previous but original is kept
+  #    gdm_autoRename --mv item.ext '${name}_bak' '${name}_bak($n)'
+  #    gdm_autoRename item.ext '${name}_bak' '${name}_bak($n)'
+  #                                      Renamed to item_bak.ext or, if that exists, item_bak(2).ext, etc
+  #    gdm_autoRename --cp item.ext '${name}_bak' '${name}_bak($n)'
+  #                                      Same as previous but original is kept
+
+  local mode=mv
+  while [[ "$1" =~ '^--(mv|cp)$' ]] ; do mode="${1[3,-1]}" ; shift ; done
+
+  ! [[ -e "$1" ]] && return 1
+  local fullpath="${1:a}" 
+  local parent="${fullpath:h}" ; [[ "$parent[-1]" != '/' ]] && parent="$parent/"
+  local name="${fullpath:t:r}" ; 
+  local ext="" ; ! [[ -z "${fullpath:e}" ]] && ext=".${fullpath:e}"
+
+  if [[ -z "$2" ]] ; then  # default is to append (before ext)  "-backup" or, if that exists, "-backup-2", then "-backup-3"
+    $0.append_tmpl() { ((n<2)) && echo "$parent$name-backup$ext" || echo "$parent$name-backup-$n$ext" ; }
+
+  else # custom renaming template(s) provided
+    local tmpl_a="$2"  # a template string referencing the original filename (w/o ext) as $name
+    if [[ -z "$3" ]] ; then
+      $0.append_tmpl() { ((n<2)) && eval "echo \"$parent$tmpl_a$ext\"" || eval "echo \"$parent$tmpl_a-$n$ext\"" ; }
+    else
+      local tmpl_b="$3" # a second template string used when first one fails, referencing $n (and also $name as before)
+      $0.append_tmpl() { ((n<2)) && eval "echo \"$parent$tmpl_a$ext\"" || eval "echo \"$parent$tmpl_b$ext\"" ; }
+    fi
+  fi
+
+  local n=1 ; local newpath="$($0.append_tmpl)" # Determine new name using template and, if exists, apply...
+  while [[ -e $newpath ]] ; do ((n++)) ; newpath="$($0.append_tmpl)" ; done # incremented n until not existing
+  
+  local ret=0
+  # mv|cp $fullpath/*(DN) $newpath/ # alternative for dirs,
+  if [[ "$mode" == mv ]] ; then  mv -f "$fullpath" "$newpath" ; ret=$? # mv files or dirs
+  elif [[ -d "$fullpath" ]] ; then cp -rf "$fullpath" "$newpath" ; ret=$? # cp dir
+  else cp "$fullpath" "$newpath" ; ret=$? # cp file
+  fi
+  ((ret==0)) && echo "$newpath"
+  return $ret
 }
