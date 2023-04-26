@@ -88,7 +88,7 @@ gdm.parseRequirement() {
   fi
   
   ###### set regis_suffix: get value and type of setup command and hash it #################################
-  local regis_suffix="" # empty unless there is a setup, in which case it will be: _setup-<setup_hash>
+  local regis_suffix="" # empty unless there is a setup, in which case it will be: _<setup_hash>
   local setup_hash=""
   if ! [[ -z "$setup" ]] ; then
     # Here we resolve value of $setup to something that doesn't change and then form a $hash from that
@@ -106,60 +106,35 @@ gdm.parseRequirement() {
     fi
     $0.strToHash() { crc32 <(echo "$1") ; }
     if ! setup_hash=$($0.strToHash "$setup_val") ; then echo "$(_S R S)$setup (setup) cannot be hashed!$(_S)" >&2 ; return 1 ; fi
-    regis_suffix="_setup-$setup_hash"
+    regis_suffix="_$setup_hash"
   fi
 
+  ###### set regis_prefix to full hash and assemble paths  ############################################################
+
   local register_parent="$GDM_REGISTRY/${${remote_url#*//}:r}" # set to $GDM_REGISTRY/domain/vendor/repo
-  local regis_prefix="$tag" ; [[ -z "$regis_prefix" ]] && regis_prefix=$hash[1,$GDM_MIN_HASH_LEN] 
-  # NOTE: when regis_prefix is a hash, it is an estimate that may need elongation (done later in this function)
-  # [[ -z "$regis_prefix" ]] && return 64 #TODO: what was this??
+  #TODO: maybe we should output the above without $GDM_REGISTRY/ and maybe rename this variable to repo_register
+  # Why? It should be added to config_lock and we don't want GDM_REGISTRY there since it's customizable 
+
+  local regis_prefix=$hash
 
   local register_id="$regis_prefix$regis_suffix"
   local register_path="$register_parent/$register_id" 
 
-  local manifest_found=false
-
-  if [[ -d "$register_parent" ]] ; then
-    # Expand Hash to be long enough to not clash 
-    if [[ -z $tag ]] ; then
-      local hash_backup="$hash"
-      local found_hash
-      for len in {$#regis_prefix..$#hash} ; do
-        regis_prefix="$hash[1,$len]"
-        register_id="$regis_prefix$regis_suffix"
-
-        if [[ -f "$register_parent/$register_id/$register_id.$GDM_MANIF_EXT" ]] ; then 
-          found_hash=$(source "$register_parent/$register_id/$register_id.$GDM_MANIF_EXT" && echo "$hash") || break
-          if [[ $found_hash == $hash ]] ; then  manifest_found=true ; break ; fi
-          # else # doesn't match so we need a longer short hash (regis_prefix)
-        else  break # missing, so we can use this short hash (regis_prefix)
-        fi
-      done
-      hash="$hash_backup"
-    elif [[ -f "$register_parent/$register_id/$register_id.$GDM_MANIF_EXT" ]] ; then manifest_found=true
-    fi
-  fi
-
-  register_path="$register_parent/$register_id" 
   local register_manifest="$register_path/$register_id.$GDM_MANIF_EXT"
   local register_snapshot="$register_path.$GDM_SNAP_EXT"
+
+
+  #### SEARCH FOR & VALIDATE PREVIOUS REGISTER OR MARK AS NOT PREVIOUSLY REGISTERED ##################################
 
   local prev_registered=false
   local prev_registration_error
 
-  if $manifest_found ; then
-    prev_registered=true
+  if [[ -d "$register_path" ]] ; then
+    prev_registered=true #TODO: keep this as true even if register is invalid?
     local manif_valid_assigns="$(gdm_echoVars --local $GDM_MANIF_VALIDATABLES)" 
     gdm_validateInstance --register $unlinked_regis_flag $register_manifest $register_path $register_snapshot "$manif_valid_assigns" $GDM_MANIF_VALIDATABLES #FUNCTION CALL: gdm_validateInstance
     prev_registration_error=$?
-  
-  elif [[ -d "$register_path" ]] ; then
-    prev_registered=true #TODO: add this? (it was left false here before and I think true was flag indicating VALID regis )
-    prev_registration_error=$GDM_ERRORS[register_manifest_missing] 
-  else
-    prev_registered=false 
   fi
-
 
   gdm_echoVars $outputVars 
   return 0

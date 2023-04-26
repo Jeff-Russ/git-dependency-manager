@@ -239,13 +239,23 @@ gdm_echoVars() {
 gdm_echoAndExec() {
   local err_code err_cap 
   local newline_patt="$(echo '.*'; echo '.*')"
+  local abbreviate=true
+  if [[ "$1" == '--abbreviate=false' ]] ; then 
+    abbreviate=false ; shift
+  elif  [[ "$1" == '--abbreviate=true' ]] || [[ "$1" == '--abbreviate' ]] ; then 
+    abbreviate=true ; shift
+  fi
   local cmd="$@"
-  local append="" ; [[ "$cmd" =~ "$newline_patt$" ]] && append="#..."
-  print -- "$(_S B)$(echo "${cmd//$GDM_REGISTRY/\$GDM_REGISTRY}" | head -1)$(_S)$append" >&2 #TEST (commented out)
+  if $abbreviate ; then 
+    local append="" ; [[ "$cmd" =~ "$newline_patt$" ]] && append="#..."
+    print -- "$(_S B)$(echo "${cmd//$GDM_REGISTRY/\$GDM_REGISTRY}" | head -1)$(_S)$append" >&2 
+  else
+    print -- "$(_S B)${cmd//$GDM_REGISTRY/\$GDM_REGISTRY}" >&2 
+  fi
   #TODO: FIX BUG IN ABOVE WHEN cmd='cp -al "/Users/jeffreyruss/.shell_extensions/GIT_REPO_DEPS/git-dependency-manager/test/gdm_require/github.com/juce-framework/juce/221d1aa_setup-fa175323" "/Users/jeffreyruss/.shell_extensions/GIT_REPO_DEPS/git-dependency-manager/test/gdm_required/juce"'
   
   err_cap="$(eval "$@" 1>/dev/null 2>&1)" ; err_code=$?
-  if ((err_code)) ; then echo "$cap$(_S R S)Terminating due to previous command returning error code $err_code$(_S)" >&2 ; return $err_code ; fi
+  if ((err_code)) ; then echo "$err_cap$(_S R S)Terminating due to previous command returning error code $err_code$(_S)" >&2 ; return $err_code ; fi
 }
 
 gdm_mapDecl() { local result ; result="$(typeset -p "$1")" || return $? ; } # unused

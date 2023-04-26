@@ -141,8 +141,8 @@ export GDM_CONFIG_LOCKVARS=(to remote_url hash tag hash setup_hash setup) # IN O
 
 # environment variables used in require and register:
 export GDM_MANIF_EXT="gdm_manifest"
-export GDM_MANIF_VARS=(gdm_manifest_inode gdm_version register_path remote_url hash tag setup_hash)
-export GDM_MANIF_VALIDATABLES=(register_path remote_url hash tag setup_hash)
+export GDM_MANIF_VARS=(gdm_manifest_inode gdm_version register_path remote_url hash tag branch setup setup_hash)
+export GDM_MANIF_VALIDATABLES=(register_path remote_url hash setup_hash)
 # used only in register:
 export GDM_SNAP_EXT="gdm_snapshot"
 
@@ -181,7 +181,7 @@ gdm() {
   fi
 
   #NOTE: Add all operations we allow to run without a project here:
-  local non_proj_operations=(register project)
+  local non_proj_operations=(project)
 
   # Ensure we run gdm.project for all operations requiring a project (i.e. are not in non_proj_operations)
   if ! (($non_proj_operations[(Ie)$operation])) ; then

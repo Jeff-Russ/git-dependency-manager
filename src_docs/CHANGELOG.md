@@ -2,17 +2,16 @@
 
 ## Current Commit
 
-#### Continue project awareness with parseConfig + various other minor changes
-
 IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** list is a change made in the current commit: subsequent commits must have them deleted from this list and added to the top of the **Past Commits** list
 
-- [x] For testing add a `--source` option to bypass blocking of sourcing.
-- [x] Create an `gdm_ask` helper: we'll probably need it later to verify certain actions with users.
-- [x] In `gdm.parseRequirement`, change default `to` value to use same capitalization used by user in specifying repository.
-- [x] Modify `gdm_validateInstance` to output (stdout) each `${mode}_manifest_requirement_mismatch` 
-- [x] Update calls to  `gdm_validateInstance`  to `show_output` from `git diff` and `*_manifest_requirement_mismatch`
-- [x] Modify `gdm_validateInstance`  (and `GDM_ERRORS`) to  look for errors in a more better sequence: generally putting more recoverable errors first (and minor errors last) but also checking for errors which would better explain other errors first.
-- [ ] Start a `gdm.parseConfig` function within `gdm.project` to sort out `config` and `config_lock` before requiring. ==TODO==: finish this
+#### Always register by full `hash`, do not validate `tag` value.
+
+- [x] Always register by full `hash`
+  - [x] `regis_prefix` (the first part of `register_id`) should always be the full `hash` (the second part remains `"_$setup_hash"` if applicable) because this is the only thing that does not change (a `tag` or head of a `branch` can change `hash`). This is to prepare for a future change: if a locked requirement is being installed, it is installed by the `remote_url`, full `hash`, and `setup` (if applicable) ignoring everything else.
+  - [x] Since we are changing the way we register, it no longer makes sense to embed the tag into the manifest file name either, so these should just be `$hash[_$setup_hash].gdm_manifest`. 
+  - [x] Manifest should also be validated to contain what's needed to install a locked requirement: so no `tag` or `branch` and yes to `remote_url` `hash` `setup_hash` and maybe `register_path` (we shouldn't put the value of `$GDM_REGISTRY` in the manifest but we'll make that change later). Determining what `rev_is` value were if referencing a  `branch`, or `tag` for a given requirement can still be done via comparing to the `config` entry.  Those value can change in relation to the full `hash` but we aren't concerned with them aside from the time a new requirement is being installed. 
+  - [x] `gdm_validateInstance` will need to be updated to reflect new, leaner format of manifest files and we should only fail if the `hash` or `setup` is different when installing a locked requirement from the registry or when verifying a previously installed requirement that is locked. 
+- [ ] Finish a `gdm.parseConfig` function within `gdm.project` to sort out `config` and `config_lock` before requiring.
 - [ ] To gdm.require:
   - [ ] implement config/config_lock to (when called via config or directly in user shell):
     - [ ] add to config_lock when upon first requiring
@@ -43,7 +42,14 @@ IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** lis
 
 This list is in reverse order: Items on top are changed made in most recent to the current commit (but not the current commit).
 
-IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** list is a change made in the current commit: subsequent commits must have them deleted from this list and added to the top of the **Past Commits** list
+#### Continue project awareness with parseConfig + various other minor changes
+
+* For testing add a `--source` option to bypass blocking of sourcing.
+* Create an `gdm_ask` helper: we'll probably need it later to verify certain actions with users.
+* In `gdm.parseRequirement`, change default `to` value to use same capitalization used by user in specifying repository.
+* Modify `gdm_validateInstance` to output (stdout) each `${mode}_manifest_requirement_mismatch` 
+* Update calls to  `gdm_validateInstance`  to `show_output` from `git diff` and `*_manifest_requirement_mismatch`
+* Modify `gdm_validateInstance`  (and `GDM_ERRORS`) to  look for errors in a more better sequence: generally putting more recoverable errors first (and minor errors last) but also checking for errors which would better explain other errors first.
 
 #### rename a lot, start project awareness in gdm.require: call gdm.project and define pack function
 

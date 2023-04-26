@@ -530,18 +530,16 @@ gdm.parseConfig() {
   GDM_PROJ_DROP_LOCK_I=()      #TODO: (implement this) 
   GDM_PROJ_LOCKED_CONFIG_I=()  #TODO: (implement this) 
 
-  local locals=(
-    destin_assignments # from gdm_parseIfDesinationOption, which assigns the following...
-    required_path_opt required_path_val to required_path destin_assignments # ...but we only really need `to`
-  )
-  local $locals  
+  local destin_assignments # from gdm_parseIfDesinationOption, which assigns the following...
+  local required_path_opt required_path_val to required_path # ...but we only really need `to`
+  local repo_identifier
 
   for conf_i in {1..$#GDM_PROJ_CONFIG_ARRAY} ; do
     # test with req='juce-framework/JUCE#develop as=juce-dev setup="rm -rf .git"' ; eval "local args=($req)"
     eval "local args=( $GDM_PROJ_CONFIG_ARRAY[$conf_i] )"
 
     #--- Find `to` value --------------------------------------------------------------------------
-    local repo_identifier="$args[1]" ; local destin_assignments ; 
+    repo_identifier="$args[1]" ; 
     args=("${(@)args:1}") # remove first arg
     for arg in $args[@] ; do
       if ! destin_assignments="$(gdm_parseIfDesinationOption $arg 2>/dev/null )" ; then
@@ -566,7 +564,7 @@ gdm.parseConfig() {
 
 
   # avoid re-declaring any local (since that seems to cause output in zsh):
-  for varname in $GDM_CONFIG_LOCKVARS ; do ! (($locals[(Ie)$var])) && local $varname ; done
+  for var_name in $GDM_CONFIG_LOCKVARS ; do ! [[ -v $var_name ]] && local $var_name ; done
   local conf_i
 
   for lock_i in {1..$#GDM_PROJ_LOCK_ARRAY} ; do    

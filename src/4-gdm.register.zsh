@@ -73,7 +73,9 @@ gdm.register() {
   # MAKE A SNAPSHOT of the requirement. (init a new repo and store .git as the snapshot. NOTE: tempdir non-local. Good idea?): 
   tempdir=$(mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir') || return $snapshot_tempdir_failed # But first...
   gdm_mvSubdirsTo "$register_parent/$register_id" '.git' "$tempdir"  || return $snapshot_preswap_failed # move out all current .git/
-  gdm_echoAndExec "cd \"$register_parent/$register_id\" && git init && git add . && git commit -m \"$manifest_contents\"" || return $snapshot_failed
+  gdm_echoAndExec "cd \"$register_parent/$register_id\" && git init" || return $snapshot_failed
+  gdm_echoAndExec "cd \"$register_parent/$register_id\" && git add . " || return $snapshot_failed
+  gdm_echoAndExec "cd \"$register_parent/$register_id\" && git commit -m '$manifest_contents'" || return $snapshot_failed
   mkdir "$register_parent/$register_id.$GDM_SNAP_EXT" || return $snapshot_mkdir_failed # we'll move snapshot's .git/ to this directory
   mv "$register_parent/$register_id/.git" "$register_parent/$register_id.$GDM_SNAP_EXT" || return $?
   gdm_mvSubdirsTo "$tempdir" '.git' "$register_parent/$register_id" || return $snapshot_postswap_failed

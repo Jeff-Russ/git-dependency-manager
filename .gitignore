@@ -6,3 +6,5 @@ gdm-test.zsh
 /test/*
 !/test/gdm.zsh
 !/test/packTest.zsh
+
+Implementation_Notes.md
