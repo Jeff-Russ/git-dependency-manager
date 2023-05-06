@@ -4,43 +4,54 @@
 
 IMPORTANT: Each completed (checked with [x]) item in this **Current Commit** list is a change made in the current commit: subsequent commits must have them deleted from this list and added to the top of the **Past Commits** list
 
-#### Always register by full `hash`, do not validate `tag` value.
+#### Prep for lock i.e  parsing lock entries, quick parse normal & lock req's
 
-- [x] Always register by full `hash`
-  - [x] `regis_prefix` (the first part of `register_id`) should always be the full `hash` (the second part remains `"_$setup_hash"` if applicable) because this is the only thing that does not change (a `tag` or head of a `branch` can change `hash`). This is to prepare for a future change: if a locked requirement is being installed, it is installed by the `remote_url`, full `hash`, and `setup` (if applicable) ignoring everything else.
-  - [x] Since we are changing the way we register, it no longer makes sense to embed the tag into the manifest file name either, so these should just be `$hash[_$setup_hash].gdm_manifest`. 
-  - [x] Manifest should also be validated to contain what's needed to install a locked requirement: so no `tag` or `branch` and yes to `remote_url` `hash` `setup_hash` and maybe `register_path` (we shouldn't put the value of `$GDM_REGISTRY` in the manifest but we'll make that change later). Determining what `rev_is` value were if referencing a  `branch`, or `tag` for a given requirement can still be done via comparing to the `config` entry.  Those value can change in relation to the full `hash` but we aren't concerned with them aside from the time a new requirement is being installed. 
-  - [x] `gdm_validateInstance` will need to be updated to reflect new, leaner format of manifest files and we should only fail if the `hash` or `setup` is different when installing a locked requirement from the registry or when verifying a previously installed requirement that is locked. 
-- [ ] Finish a `gdm.parseConfig` function within `gdm.project` to sort out `config` and `config_lock` before requiring.
-- [ ] To gdm.require:
-  - [ ] implement config/config_lock to (when called via config or directly in user shell):
-    - [ ] add to config_lock when upon first requiring
-    - [ ] prevent requirements that have the same required_path as a previous requirement found on FS or in config/config_lock 
-    - [ ] add to both config and config lock newly required only if they don't override require paths of different requirements.
-- [ ] gdm_echoAndExec
-  - [ ] BUG: `gdm.require  juce-framework/juce#master`  outputs `cp -al "$GDM_REGISTRY/github.com/juce-framework/juce/7.0.5" "$GDM_REGISTRYd/juce"` via `gdm_echoAndExec`
-- [ ] To gdm.register:
-  - [ ] Directly executing `gdm.require` from within a project will register to the default value of `GDM_REGISTRY` even if the project the project's config bypasses this. Keep this behavior?? 
-- [ ] Lack of a setup option should default to a setup that removes the original `.git/` and does nothing else. If user provides a setup, do not remove the original `.git/`, thus `setup=:` can be used to retain `.git/`.
-- [ ] Prior to executing setup, create a `$regis_parent_dir/${regis_id}.git` and place copy of original `.git/` in it.
-- [ ] Have `gdm.require` gather all parsed requirements, check against `config_lock` and currently installed requirement (via scanning them) prior to processing any new or pre-existing require call.
-- [ ] Changes to  `2-gdm.init.zsh` :
-  - [ ] Consolidate into two functions: `gdm.init` and `gdm.loadProject`
+- [x] Replace all destination options (flags) with one where the variable will be called `destin` and the arg will be matching: `'^-{0,2}d(est|estin|estination|ir|irectory)?=.+'`
+- [x] We shouldn't put the value of `$GDM_REGISTRY` in the manifest: rather than registering the variable `register_path` use a new one called `path_in_registry`, which is the same as `register_path` but starts with the path segment after `$GDM_REGISTRY` 
+- [x] Make `setup` values that are not scripts or functions or are script that are not contained within the project root fail with `$GDM_ERRORS[invalid_setup]` (a new error code)
+- [x] Remove our `--allow-unlinked`/`--disallow-unlinked` flags for now. Later on we'll have something to clean the registry based on unlinked registered
+- [x] Rename `gdm()` to `gdm.main()` to make it more searchable.
+- [ ] `config`/`config_lock` functionality
+  - [x] `conf_lock` element format is **the body of an associative array** (example): `"[destin]=jucedev [remote_url]=https://github.com/juce-framework/juce.git [rev]=develop [setup]=doit [hash]=8ed3618e12230ad8563098e1f17575239497b127 [tag]='' [branch]=develop [rev_is]=branch [setup_hash]=3f14a426 "`
+  - [x] In `gdm.parseRequirement`: Create options for parsing  `config_lock` entries and quick parsing of both normal and `config_lock`  requirements
+  - [ ] In `gdm_validateInstance`: (See what needs changing)
+  - [ ] In `gdm.project`:
+    - [ ] (By call to `gdm.parseConfig`) Gather all parsed requirements, check against `config_lock` and currently installed requirement (via scanning them) prior to processing any new or pre-existing require call.
+  - [ ] `gdm.main` and (and maybe `gdm.require`)  should know which of the following scenarios it is requiring under:
+    - [ ] (see `Implementation_Notes.md` once I un-gitignore it!)
+- [ ] In `8-gdm-helpers.zsh`
+  - [x] Make `gdm_echoVars` faster by accumulating and output string to have only one `stdout` at the end of the function. 
+  - [ ] **TODO**:  `gdm_echoVars` should use `gdm_quote` function to make sure values are appropriately quoted
+  - [x] Implement a `gdm_varsToMapBody` function to pack variables into the **the body of an associative array** and use this to generate `config_lock` array elements (the `lock_entry` parameter). This function should use the new `gdm_quote` function to make sure values are appropriately quoted.
+  - [x] Implement a `gdm_echoMapBodyToVars` function to convert **the body of an associative array** (output from  `gdm_varsToMapBody`)to  a string which assigns the values to variables (from the keys and values) and use this to parse `config_lock` array elements in `gdm.parseRequirement`. 
+
+- [x] (Start to) implement and `gdm.update_conf` function to update the `$GDM_PROJ_CONF_FILE` file's `config` and `config_lock` arrays from `GDM_PROJ_CONFIG_ARRAY` and `GDM_PROJ_LOCK_ARRAY`, respectively. 
+- [ ] **TODO**: Right now, our only runtime storage of these array is within `GDM_PROJ_CONFIG_ARRAY` and `GDM_PROJ_LOCK_ARRAY` which we can modify and then write back to the `$GDM_PROJ_CONF_FILE`  file with `gdm.update_conf`. It would be a better idea to keep an untouched version of each in case we need to backtrack. 
+- [x] gdm_echoAndExec BUG: `gdm.require  juce-framework/juce#master`  outputs `cp -al "$GDM_REGISTRY/github.com/juce-framework/juce/7.0.5" "$GDM_REGISTRYd/juce"` via `gdm_echoAndExec` UPDATE: I made unrelated changes to  `gdm_echoAndExec` for whatever reasons, the bug behavior appears to not be happening now.  
+- [x] Directly executing `gdm.require` from within a project will register to the default value of `GDM_REGISTRY` even if the project the project's config bypasses this. Keep this behavior?? Update: No.. well sort of. I've blocked direct execution of `gdm.require`, one can only execute `require` as an operation and doing so always triggers `gdm.project` to be called.
+- [ ] ~~Lack of a setup option should default to a setup that removes the original `.git/` and does nothing else. If user provides a setup, do not remove the original `.git/`, thus `setup=:` can be used to retain `.git/`.~~
+- [ ] ~~Prior to executing setup, create a `$regis_parent_dir/${regis_id}.git` and place copy of original `.git/` in it.~~
+- [ ] ~~Consolidate  `2-gdm.init.zsh`   into two functions: `gdm.init` and `gdm.loadProject`~~
 - [ ] Add some new operations or sub-operations to GDM:
   - [ ] `$GMD unrequire [destination option | all but destination option | entire requirement ]`
   - [ ] `$GMD registry --show-unrequired`  show registers without required instances
   - [ ] `$GMD registry --rm-unrequired`   remove registers without required instances
-  - [ ] `$GDM required --list` list (per line) `$destin_instance vendor/reponame#$rev setup=$setup` for each installed requirement.
-  - [ ] `$GDM required --info $destin_instance` show contents of manifest for installed requirement.
+  - [ ] `$GDM required --list` list (per line) `$destin_instance vendor/reponame#$rev setup=$setup` for each installed requirement. 
+  - [ ] `$GDM required --info $destin_instance` show contents of manifest for installed requirement. Determining what `rev_is` value were if referencing a  `branch`, or `tag` for a given requirement can still be done via comparing to the `config` entry.  Those values can change in relation to the full `hash` but we aren't concerned with them aside from the time a new requirement is being installed or when the user wants to see them. Try: maybe use `git tag --points-at HEAD` to show tag on current commit or other commands like `git --no-pager log  -1 --pretty='hash=%H ; %nauthor_date="%aI" ;'` (with  more variables assigned to [placeholder](https://git-scm.com/docs/git-log#_pretty_formats) values) and something else like that to just get the commit message, which we'll parse to see if we need escaping of quotation marks.
   - [ ] `$GDM project --mv $to` to help move a project that has requirements outside project root (with warning prompts) (and update `proj_paths_lock` once it is implemented)
 - [ ] Mention in some documentation that setup function can be used to export the destination path to env vars. 
-
-
 
 
 ## Past Commits
 
 This list is in reverse order: Items on top are changed made in most recent to the current commit (but not the current commit).
+
+#### Always register by full `hash`, do not validate `tag` value.
+
+* `regis_prefix` (the first part of `register_id`) should always be the full `hash` (the second part remains `"-$setup_hash"` if applicable) because this is the only thing that does not change (a `tag` or head of a `branch` can change `hash`). This is to prepare for a future change: if a locked requirement is being installed, it is installed by the `remote_url`, full `hash`, and `setup` (if applicable) ignoring everything else.
+* Since we are changing the way we register, it no longer makes sense to embed the tag into the manifest file name either, so these should just be `$hash[_$setup_hash].gdm_manifest`. 
+* Manifest should also be validated to contain what's needed to install a locked requirement: so no `tag` or `branch` and yes to `remote_url` `hash` `setup_hash` and maybe `register_path` (we shouldn't put the value of `$GDM_REGISTRY` in the manifest but we'll make that change later). Determining what `rev_is` value were if referencing a  `branch`, or `tag` for a given requirement can still be done via comparing to the `config` entry.  Those value can change in relation to the full `hash` but we aren't concerned with them aside from the time a new requirement is being installed. 
+* `gdm_validateInstance` will need to be updated to reflect new, leaner format of manifest files and we should only fail if the `hash` or `setup` is different when installing a locked requirement from the registry or when verifying a previously installed requirement that is locked. 
 
 #### Continue project awareness with parseConfig + various other minor changes
 

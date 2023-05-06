@@ -65,6 +65,7 @@ declare -Ag GDM_ERRORS=(
   [invalid_destination_arg]=16
   [multiple_destination_args]=17
   [multiple_setups_args]=18
+  [invalid_setup]=19
 
   # gdm_validateInstance errors (evaluted in order except for register_snapshot_missing which happens in either mode)
   #      If gdm_validateInstance is passed --register
@@ -136,13 +137,12 @@ gdm.error() { echo "${(k)GDM_ERRORS[(r)$1]}" ; } # reverse lookup return error c
 export GDM_REGISTRY="${GDM_REGISTRY:=$HOME/.gdm_registry}" # might have been defined in environment
 export GDM_REQUIRED="${GDM_REQUIRED:=gdm_required}"         # can be overridden by $GDM_REQUIRE_CONF file
 export GDM_REQUIRE_CONF="gdm.zsh" 
-export GDM_CONFIG_LOCKVARS=(to remote_url hash tag hash setup_hash setup) # IN ORDER
-# export GDM_REQUIRED_LOCK="${GDM_REQUIRED_LOCK:=gdm_require.lock}"
+export GDM_CONFIG_LOCK_KEYS=(destin remote_url rev setup hash tag branch rev_is setup_hash) 
 
 # environment variables used in require and register:
 export GDM_MANIF_EXT="gdm_manifest"
-export GDM_MANIF_VARS=(gdm_manifest_inode gdm_version register_path remote_url hash tag branch setup setup_hash)
-export GDM_MANIF_VALIDATABLES=(register_path remote_url hash setup_hash)
+export GDM_MANIF_VARS=(gdm_manifest_inode gdm_version path_in_registry remote_url hash tag branch setup setup_hash)
+export GDM_MANIF_VALIDATABLES=(path_in_registry remote_url hash setup_hash)
 # used only in register:
 export GDM_SNAP_EXT="gdm_snapshot"
 
@@ -160,11 +160,11 @@ else export GDM_EXPERIMENTAL=() # add experiemental modes to always enable if us
 fi
 
 # CALLED AFTER EVERYTHING IS SOURCED:
-gdm() {
+gdm.main() {
   # echo "$(_S B)$0 $@$(_S)" #TEST
 
   if (($#==0)) ; then
-    echo "$(_S Y)gdm requires arguments!$(_S)" >&2 #TODO: show usage doc
+    echo "$(_S Y)gdm requires arguments! $(_S)" >&2 #TODO: show usage doc
     return 127
   fi
 
@@ -176,8 +176,6 @@ gdm() {
   
   if [[ "$operation" =~ '^[-]{0,2}init(ialize)?$' ]] ; then 
     gdm.project --init $@  ; return $?
-  elif [[ "$operation" =~ '^proj(ect)?$' ]] && [[ "$1" =~ '^[-]{0,2}init(ialize)?$' ]] ; then 
-    shift ; gdm.project --init $@  ; return $?
   fi
 
   #NOTE: Add all operations we allow to run without a project here:
@@ -189,6 +187,10 @@ gdm() {
     # DO NOT execute gdm.project in subshell i.e. capture
     gdm.project --traverse-parents --validate-version --validate-script #FUNCTION CALL: gdm.register
     proj_err=$? #TODO: but should we: gdm.project init ??
+
+    # print -l $GDM_CALL_FFTRACE  #TEST
+    # echo $GDM_CALL_EVAL_CONTEXT #TEST
+    # print $GDM_PROJ_VARS #TEST
 
     # echo "GDM_PROJ_VARS:" ; print -l $GDM_PROJ_VARS #TEST
 
@@ -211,7 +213,7 @@ gdm() {
       err_code=$?
       echo "gdm.project returned $err_code" #TEST
       ((err_code)) && return $? 
-    else echo "$(_S Y)GDM_PROJ_ROOT was not empty!$(_S)"  #TEST
+    else echo "$(_S Y)GDM_PROJ_ROOT was not empty! $(_S)"  #TEST
     fi
     # gdm_echoProjVars #TEST
 
@@ -227,7 +229,7 @@ gdm() {
     elif (($#GDM_PROJ_CONFIG_ARRAY==0)) ; then
       if (($#GDM_PROJ_LOCK_ARRAY>0)) ; then
         echo "TO BE IMPLEMENTED: removal of project requirements with user check" ; return 0
-      else echo "$(_S Y)Nothing to install!$(_S)" >&2 ; return 1
+      else echo "$(_S Y)Nothing to install! $(_S)" >&2 ; return 1
       fi
       
     # NORMAL PROJECT 'install'/'config' MODE: iterating over config array to require each:
@@ -251,5 +253,4 @@ gdm() {
     echo "$(_S R)gdm failed due to unknown option: $(_S G)$operation$(_S)" ; return 127
   fi
   return $?
-
 }

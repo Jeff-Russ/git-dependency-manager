@@ -2,9 +2,13 @@
 Ignored*
 Trash*
 gdm-test.zsh
-*.drawio.bkp
+
 /test/*
 !/test/gdm.zsh
 !/test/packTest.zsh
 
 Implementation_Notes.md
+
+# draw.io special files:
+*.drawio.bkp
+*.drawio.dtmp

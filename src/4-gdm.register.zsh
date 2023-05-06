@@ -1,23 +1,23 @@
-export GDM_REGISTRATION_VARS=(remote_url rev rev_is hash tag branch to setup register_parent register_id setup_hash
-register_path required_path register_manifest register_snapshot prev_registered prev_registration_error register_created)
+export GDM_REGISTRATION_VARS=(remote_url rev rev_is hash tag branch destin setup register_parent register_id setup_hash path_in_registry
+register_path required_path register_manifest register_snapshot prev_registered prev_registration_error register_created
+# lock_entry #TEST
+)
 
 gdm.register() {
   # Input: $1 is assigments of remote_url hash setup register_manifest register_path register_snapshot register_parent register_id required_path
   # Needed: GDM_VERSION GDM_MANIF_VARS GDM_SNAP_EXT destructured GDM_ERRORS
 
-  local unlinked_regis_flag="--allow-unlinked-register" # allow
   local dry_run=false # If true, gdm.register can be used as a visual front end for a dry run of parseRequirement
+
   
   while [[ "$1" =~ '^--.+' ]] ; do
-    if  [[ "$1" == --re-register-unlinked ]] ; then unlinked_regis_flag="--disallow-unlinked-register" ; shift
-    elif  [[ "$1" == --re-register-unlinked=false ]] ; then unlinked_regis_flag="--allow-unlinked-register" ; shift
-    elif [[ "$1" =~ '^--dry-run$' ]] ; then dry_run=true ; shift 
+    if [[ "$1" =~ '^--dry-run$' ]] ; then dry_run=true ; shift 
     # possibly add more options here, later on
     else break
     fi
   done
 
-  if ! (($#)) ; then echo "$(_S Y)$0 received no arguments!$(_S)" >&2  ; return $GDM_ERRORS[invalid_argument] ; fi
+  if ! (($#)) ; then echo "$(_S Y)$0 received no arguments! $(_S)" >&2  ; return $GDM_ERRORS[invalid_argument] ; fi
 
   local outputVars=("${GDM_REGISTRATION_VARS[@]}")
   local register_created=false
@@ -29,7 +29,7 @@ gdm.register() {
 
   ###### PARSE REQUIREMENT ########################################################################
   local requirement requirement_error
-  requirement="$(gdm.parseRequirement $unlinked_regis_flag $@)" ; requirement_error=$? #FUNCTION CALL: gdm.parseRequirement
+  requirement="$(gdm.parseRequirement $@)" ; requirement_error=$? #FUNCTION CALL: gdm.parseRequirement
   ((requirement_error==invalid_argument)) && return $invalid_argument ;
   local $GDM_REQUIREMENT_VARS ;  eval "$requirement"
   
@@ -37,12 +37,12 @@ gdm.register() {
   if $prev_registered ; then
     echo "$(_S D S E)Validating previous registration for $@ in ${register_path//$GDM_REGISTRY\//} ...$(_S)" >&2
     if ((prev_registration_error==0)) ; then
-      echo "$(_S G)Previous registration is valid!$(_S) Location: \$GDM_REGISTRY/${register_parent#*$GDM_REGISTRY/}/$register_id" >&2
+      echo "$(_S G)Previous registration is valid! $(_S) Location: \$GDM_REGISTRY/${register_parent#*$GDM_REGISTRY/}/$register_id" >&2
       gdm_echoVars $outputVars ; return 0 ;
     elif ((prev_registration_error==register_manifest_missing)) ; then 
       echo "$(_S M)Generating new registration.$(_S) Reason: previous register_manifest not found in \$GDM_REGISTRY" >&2
-    elif ((prev_registration_error==register_manifest_unlinked)) ; then 
-      echo "$(_S M)Generating new registration.$(_S) Reason: $unlinked_regis_flag was passed and previous register has no required instances" >&2
+    # elif ((prev_registration_error==register_manifest_unlinked)) ; then 
+    #   echo "$(_S M)Generating new registration.$(_S) Reason: $unlinked_regis_flag was passed and previous register has no required instances" >&2
     else
       local disp_err="$(gdm_keyOfMapWithVal GDM_ERRORS $prev_registration_error)" ; [[ -z $disp_err ]] && disp_err=$prev_registration_error
       echo "$(_S M)Re-generating registration for $@$(_S) Reason: Previously registration returned error: $disp_err" >&2
@@ -86,7 +86,3 @@ gdm.register() {
   gdm_echoVars $outputVars 
   return 0
 }
-
-
-
-

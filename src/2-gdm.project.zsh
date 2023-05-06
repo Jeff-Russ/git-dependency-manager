@@ -5,28 +5,31 @@ export GDM_CALL_ARGS=() # Will be set in gdm() BEFORE anything here is called. I
 
 export GDM_PROJ_VARS="" # archive of local var assignments used to assign each other GDM_PROJ_* var
 export GDM_PROJ_CALL_STATUS=""
-export GDM_PROJ_ROOT=""
-export GDM_PROJ_CONFIG_FILE=""
-export GDM_PROJ_CONFIG_WAS=""
+export GDM_PROJ_ROOT=""        # full absolute path of project root directory
+export GDM_PROJ_CONF_FILE="" # full absolute file path
+export GDM_PROJ_CONF_WAS=""  # created|valid|invalid|"unexpected error" or 'missing' but not for long if --init
 
-# (The function body is the lines between the lines specified below)
-export GDM_PROJ_CONFIG_STARTLINE=""  # starting line number for export config in scanned GDM_PROJ_CONFIG_FILE
-export GDM_PROJ_CONFIG_ENDLINE=""    #   ending line number for exported config array in scanned GDM_PROJ_CONFIG_FILE
-export GDM_PROJ_LOCK_STARTLINE=""  # starting line number for exported config_lock array in scanned GDM_PROJ_CONFIG_FILE
-export GDM_PROJ_LOCK_ENDLINE=""    #   ending line number for exported config_lock array in scanned GDM_PROJ_CONFIG_FILE
+export GDM_PROJ_CONF_FILE_SECTIONS=(  # contents of file in chunks where replaceable portion (conf and conf_lock arrays) are chunks
+  '' # [1] (readonly) is all lines before conf array
+  '' # [2] (REPLACABLE) is all lines where conf array is declared+defined
+  '' # [3] (readonly) is all lines after conf array and before conf_lock
+  '' # [4] (REPLACABLE) is all lines where conf_lock array is declared+defined
+  '' # [5] (readonly) is all remaining lines
+) 
+
 export GDM_PROJ_CONFIG_ARRAY=()
 export GDM_PROJ_LOCK_ARRAY=()
 export GDM_PROJ_CONFIG_IDX=0 # should be incremented as index of both GDM_PROJ_CONFIG_ARRAY and GDM_PROJ_LOCK_ARRAY (at once)
 #NOTE GDM_CALL_ARGS (as a string) is basically GDM_PROJ_CONFIG_ARRAY[$GDM_PROJ_CONFIG_IDX] when GDM_PROJ_CONFIG_IDX==0
 
 export GDM_PROJ_CONFIG_I_TO_LOCK_I=() # Each index is a GDM_PROJ_CONFIG_ARRAY index and each value is:
-# 1) the corresponding index in GDM_PROJ_LOCK_ARRAY with the same `to` value
+# 1) the corresponding index in GDM_PROJ_LOCK_ARRAY with the same `destin` value
 #   but it could also be:
-# 2) the `to` value if ther is no corresponding index in GDM_PROJ_LOCK_ARRAY with the same `to` value
+# 2) the `destin` value if there is no corresponding index in GDM_PROJ_LOCK_ARRAY with the same `destin` value
 # 3) a key in GDM_ERRORS (*_destination_arg, destination_already_required_to), indicating the conf requirement has an error.
 # NOTE that the absence of an error doesn't mean there won't be one found later when the requirement is passed to gdm.require.
 
-export GDM_PROJ_DROP_LOCK_I=() # values are indices in GDM_PROJ_LOCK_ARRAY with `to` values not targeted by 
+export GDM_PROJ_DROP_LOCK_I=() # values are indices in GDM_PROJ_LOCK_ARRAY with `destin` values not targeted by 
 # any requirement in config (GDM_PROJ_CONFIG_ARRAY). Note that the indexes in GDM_PROJ_DROP_LOCK_I is unimportant. 
 # GDM_PROJ_DROP_LOCK_I is basically a list of the elements no longer needed in conf_lock since they are not longer required.
 
@@ -97,7 +100,7 @@ gdm.project() {
       echo "              new file with \`\$GDM init\` and then copy your contents from the backup to the new file.$(_S)" >&2
     elif ((call_err==$GDM_ERRORS[no_project_found])) ; then
       errors+=("No project was found! Run \`\$GDM init\` to create one.")
-      echo "$(_S Y)No project was found!$(_S) Run \`\$GDM init\` to create one." >&2 
+      echo "$(_S Y)No project was found! $(_S) Run \`\$GDM init\` to create one." >&2 
     else
       echo "$(_S R)Unexpected Error: gdm_locateProject returned error code $call_err$(_S Y D)" >&2
       print -l $errors >&2 ; echo -n "$(_S)" >&2
@@ -111,17 +114,27 @@ gdm.project() {
   ##### PPROJECT IS VALID SO EXPORT PROJECT VARABLESS #############################################
   GDM_PROJ_CALL_STATUS="$call_status"
   GDM_PROJ_ROOT="$proj_root"
-  GDM_PROJ_CONFIG_FILE="$proj_conf"
-  GDM_PROJ_CONFIG_WAS="$config_was"
-  GDM_PROJ_CONFIG_STARTLINE=$config_startline
-  GDM_PROJ_CONFIG_ENDLINE=$config_endline
-  GDM_PROJ_LOCK_STARTLINE=$lock_startline
-  GDM_PROJ_LOCK_ENDLINE=$lock_endline 
+  GDM_PROJ_CONF_FILE="$proj_conf"
+  GDM_PROJ_CONF_WAS="$config_was"
   shift $# # clear to prevent sourcing from forwarding arguments
-  source "$GDM_PROJ_CONFIG_FILE"
+  source "$GDM_PROJ_CONF_FILE"
   GDM_PROJ_CONFIG_ARRAY=("${config[@]}")
   GDM_PROJ_LOCK_ARRAY=("${config_lock[@]}")
+
+
   gdm.parseConfig
+
+  local line_num=0 ;
+  while IFS= read -r line  || [ -n "$line" ] ; do 
+    ((++line_num))
+    if   ((line_num<config_startline)) ; then GDM_PROJ_CONF_FILE_SECTIONS[1]="$GDM_PROJ_CONF_FILE_SECTIONS[1]${line}\n" 
+    elif ((line_num<=config_endline)) ; then GDM_PROJ_CONF_FILE_SECTIONS[2]="$GDM_PROJ_CONF_FILE_SECTIONS[2]${line}\n" # conf
+    elif ((line_num<lock_startline)) ; then GDM_PROJ_CONF_FILE_SECTIONS[3]="$GDM_PROJ_CONF_FILE_SECTIONS[3]${line}\n"
+    elif ((line_num<=lock_endline)) ; then GDM_PROJ_CONF_FILE_SECTIONS[4]="$GDM_PROJ_CONF_FILE_SECTIONS[4]${line}\n" # conf_lock
+    else                                  GDM_PROJ_CONF_FILE_SECTIONS[5]="$GDM_PROJ_CONF_FILE_SECTIONS[5]${line}\n"
+    fi
+  done <"$GDM_PROJ_CONF_FILE"
+
 
 
   if [[ "$config_was" == 'created' ]] ; then
@@ -136,8 +149,8 @@ gdm.project() {
 
 gdm_locateProject() { 
   # gdm_locateProject looks for a project based on how GDM was executed and, 
-  #                   if GDM_PROJ_CONFIG_FILE if not found and --init is passed, creates it.
-  #          If a GDM_PROJ_CONFIG_FILE is found, gdm_locateProject validates it and returns an error if:
+  #                   if GDM_PROJ_CONF_FILE if not found and --init is passed, creates it.
+  #          If a GDM_PROJ_CONF_FILE is found, gdm_locateProject validates it and returns an error if:
   #            1) $config_was==invalid  which means the config file:
   #                                a) is found in the call stack but did not directly source GDM
   #                                b) did not export arrays: config config_lock  or export the strings: GDM GDM_VER.
@@ -145,14 +158,14 @@ gdm_locateProject() {
   #                                d) --validate-script  was passed and the check failed (see below)
   #                                e) exporting config config_lock as well as sourcing GDM are not done properly or in the correct order.
   #            2) $config_was=="unknown error" (unlikely, possibly impossible)
-  #          If a GDM_PROJ_CONFIG_FILE is found and is valid, it parses the file, assigning exported variables (see 'side effects').
+  #          If a GDM_PROJ_CONF_FILE is found and is valid, it parses the file, assigning exported variables (see 'side effects').
   # Prerequisites (below doesn't list exports always required):
   #      must be exported with valid values:
   #           GDM_REQUIRE_CONF, GDM_CALLER_WD. GDM_CALL_EVAL_CONTEXT, GDM_CALL_FFTRACE
   #      must be exported (the last two as empty arrays):
   #           GDM_PROJ_ROOT, GDM_PROJ_REQUIRE_LINES, GDM_PROJ_LOCK_LINES 
   # Input (all optional and non-positional)
-  #       --init              # if GDM_PROJ_CONFIG_FILE is missing, create it.
+  #       --init              # if GDM_PROJ_CONF_FILE is missing, create it.
   #       --traverse-parents  # Unless provided and not called by GDM_CALLER_WD or executed with GDM_CALLER_WD 
   #                           # in the call stack, only the GDM_CALLER_WD is searched for GDM_REQUIRE_CONF
   #       --validate-version  # fail if GDM_VER is not compatible with GDM_VERSION by beginning with GDM_VER_COMPAT 
@@ -192,7 +205,7 @@ gdm_locateProject() {
   #       cannot successfully reassign an exported variable. Therefore, non-failing (output with config_was equaling 'created' or 'valid'
   #       should normally trigger assigment of:
   #           GDM_PROJ_ROOT="$proj_root"
-  #           GDM_PROJ_CONFIG_FILE="$proj_conf"
+  #           GDM_PROJ_CONF_FILE="$proj_conf"
   #           GDM_PROJ_CONFIG_STARTLINE=$config_startline
   #           GDM_PROJ_CONFIG_ENDLINE=$config_endline
   #           GDM_PROJ_LOCK_STARTLINE=$lock_startline
@@ -436,14 +449,14 @@ gdm_locateConfSections() {
   #         errors=(<plain strings>) # error messages normally to be displayed to user, 
   #                                  # accumulating all errors found before finaly failing if nonempty
   #              Possible errors (cumulative, all returning $GDM_ERRORS[malformed_config_file]):
-#                    errors+=("config array cannot be exported after config_lock in \"$conf_file\" at line $line_num") 
-#                    errors+=("exported config_lock array cannot be defined before config in \"$conf_file\" at line $line_num")
-#                    errors+=("exported config_lock array cannot be defined after sourcing GDM in \"$conf_file\" at line $line_num") 
-#                    errors+=("GDM is not sourced and/or not forwarded arguments properly in \"$conf_file\" at line $line_num")
-#                    errors+=("GDM is called in \"$conf_file\" at line $source_gdm_line then called again at line $line_num") 
-#                    errors+=("config array was not properly exported in \"$conf_file\"")
-#                    errors+=("config_lock array was not properly exported in \"$conf_file\"")
-#                    errors+=("GDM is not properly sourced in \"$conf_file\"")
+  #                    errors+=("config array cannot be exported after config_lock in \"$conf_file\" at line $line_num") 
+  #                    errors+=("exported config_lock array cannot be defined before config in \"$conf_file\" at line $line_num")
+  #                    errors+=("exported config_lock array cannot be defined after sourcing GDM in \"$conf_file\" at line $line_num") 
+  #                    errors+=("GDM is not sourced and/or not forwarded arguments properly in \"$conf_file\" at line $line_num")
+  #                    errors+=("GDM is called in \"$conf_file\" at line $source_gdm_line then called again at line $line_num") 
+  #                    errors+=("config array was not properly exported in \"$conf_file\"")
+  #                    errors+=("config_lock array was not properly exported in \"$conf_file\"")
+  #                    errors+=("GDM is not properly sourced in \"$conf_file\"")
   # return: $GDM_ERRORS[malformed_config_file] if any checks fail ; 1 if $config_was=="unknown error" ; else 0
   local proj_conf="$1"
 
@@ -530,15 +543,15 @@ gdm.parseConfig() {
   GDM_PROJ_DROP_LOCK_I=()      #TODO: (implement this) 
   GDM_PROJ_LOCKED_CONFIG_I=()  #TODO: (implement this) 
 
-  local destin_assignments # from gdm_parseIfDesinationOption, which assigns the following...
-  local required_path_opt required_path_val to required_path # ...but we only really need `to`
+  local destin required_path # ...but we only really need `destin`
   local repo_identifier
 
   for conf_i in {1..$#GDM_PROJ_CONFIG_ARRAY} ; do
-    # test with req='juce-framework/JUCE#develop as=juce-dev setup="rm -rf .git"' ; eval "local args=($req)"
+    # test with req='juce-framework/JUCE#develop destin=juce-dev setup="rm -rf .git"' ; eval "local args=($req)"
     eval "local args=( $GDM_PROJ_CONFIG_ARRAY[$conf_i] )"
 
-    #--- Find `to` value --------------------------------------------------------------------------
+    # TODO: redo with a function call: maybe even a call to parseRequirement, which we can give some shorter execution
+    #--- Find `destin` value --------------------------------------------------------------------------
     repo_identifier="$args[1]" ; 
     args=("${(@)args:1}") # remove first arg
     for arg in $args[@] ; do
@@ -549,31 +562,31 @@ gdm.parseConfig() {
           GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]="multiple_destination_args"
         else
           eval "$destin_assignments"
-          if (($GDM_PROJ_CONFIG_I_TO_LOCK_I[(Ie)$to])) ; then
+          if (($GDM_PROJ_CONFIG_I_TO_LOCK_I[(Ie)$destin])) ; then
             GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]="destination_already_required_to"
           else
-            GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]="$to"
+            GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]="$destin"
           fi
         fi
         break
       fi
     done
-    # Default `to` value (use same capitalization used by user in specifying repository):
+    # Default `destin` value (use same capitalization used by user in specifying repository):
     [[ -z "$GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]" ]] && GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]="${${repo_identifier%#*}:t:r}" 
   done
 
+  #TODO we no longer have GDM_CONFIG_LOCKVARS, now it's GDM_CONFIG_LOCK_KEYS
+  # # avoid re-declaring any local (since that seems to cause output in zsh):
+  # for var_name in $GDM_CONFIG_LOCKVARS ; do ! [[ -v $var_name ]] && local $var_name ; done
+  # local conf_i
 
-  # avoid re-declaring any local (since that seems to cause output in zsh):
-  for var_name in $GDM_CONFIG_LOCKVARS ; do ! [[ -v $var_name ]] && local $var_name ; done
-  local conf_i
-
-  for lock_i in {1..$#GDM_PROJ_LOCK_ARRAY} ; do    
-    eval "$GDM_PROJ_LOCK_ARRAY[$lock_i]" # sets `to` since `to` is in $GDM_CONFIG_LOCKVARS
-    conf_i=$(($GDM_PROJ_CONFIG_I_TO_LOCK_I[(Ie)$to])) # index of $to in conf, or 0 if not found
-    if ((conf_i!=0)) ; then GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]=$lock_i
-    else GDM_PROJ_DROP_LOCK_I+=($lock_i)
-    fi
-  done
+  # for lock_i in {1..$#GDM_PROJ_LOCK_ARRAY} ; do    
+  #   eval "$GDM_PROJ_LOCK_ARRAY[$lock_i]" # sets `destin` since `destin` is in $GDM_CONFIG_LOCKVARS
+  #   conf_i=$(($GDM_PROJ_CONFIG_I_TO_LOCK_I[(Ie)$destin])) # index of $destin in conf, or 0 if not found
+  #   if ((conf_i!=0)) ; then GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]=$lock_i
+  #   else GDM_PROJ_DROP_LOCK_I+=($lock_i)
+  #   fi
+  # done
 }
 
 # for debugging:
@@ -584,4 +597,33 @@ gdm.echoProjVars() {
 }
 
 
+gdm.update_conf() {
+  local proj_conf="$1" ; [[ -z "$proj_conf" ]] && proj_conf="$GDM_PROJ_CONF_FILE"
+  if [[ -z "$proj_conf" ]] ; then # shouldn't ever actually happen
+    echo "$(_S R)Cannot write to project configuration file as it's path is not found!" >&2 
+    return $GDM_ERRORS[unexpected_error]
+  fi
+  $0.write_array() { # needs outer scope's $proj_conf
+    local array_name="$1" ; shift
+    echo "export $array_name=(" >> "$proj_conf"
+    for elem in $@ ; do
+      local has_single=false ; [[ "$elem" =~ "(^'|[^\\]')" ]] && has_single=true
+      local has_double=false ; [[ "$elem" =~ '(^"|[^\\]")' ]] && has_double=true
 
+      if $has_single && ! $has_double ; then
+        echo "  \"$elem\"" >> "$proj_conf"
+      else
+        echo "  '$elem'" >> "$proj_conf"
+        if $has_single && $has_double ; then
+          echo "$(_S Y)WARNING: The following array element written to $proj_conf has both unescaped single and double quotes and may need correction:$(_S)\n '$elem'" >&2 
+        fi
+      fi
+    done
+    echo ")" >> "$proj_conf"
+  }
+  echo "${GDM_PROJ_CONF_FILE_SECTIONS[1]}" > "$proj_conf"
+  $0.write_array config "${GDM_PROJ_CONFIG_ARRAY[@]}"
+  echo "${GDM_PROJ_CONF_FILE_SECTIONS[3]}" >> "$proj_conf"
+  $0.write_array config_lock "${GDM_PROJ_LOCK_ARRAY[@]}"
+  echo "${GDM_PROJ_CONF_FILE_SECTIONS[5]}" >> "$proj_conf"
+}

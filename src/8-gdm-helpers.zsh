@@ -61,7 +61,7 @@ gdm_getInode() {
 gdm_hardLinkCount() { echo $(($(ls -liUT "$1" | awk '{print $3}')-1)) ; }
 
 function _S() { # S for STYLE
-  # EXAMPLES: echo -e "$(_S R E)red italics$(_S)" ; echo -e "$(_S R E)ERROR: $(_S E)just italics\!$(_S)"
+  # EXAMPLES: echo -e "$(_S R E)red italics$(_S)" ; echo -e "$(_S R E)ERROR: $(_S E)just italics\! $(_S)"
   # [S]trong(bold), [D]im, [E]mphasis(italic), [U]nderline, [F]Flash(blink). [6]?, 
   # [I]nvertFG/BG-colors, [R]ed, [G]reen, [Y]ellow, [G]reen, [B]lue, [M]agenta, [C]yan
   declare -A cLU=( [S]=1 [D]=2 [E]=3 [U]=4 [F]=5 [6]=6 [I]=7 [R]=31 [G]=32 [Y]=33 [B]=34 [M]=35 [C]=36 ) # codeLookUp
@@ -98,25 +98,25 @@ gdm_ask () {
 gdm_typeof() {
   if [[ -z "$1" ]] || [[ "$1" == --help ]] ; then
     cat << 'USAGEDOC'
-getType accepts a string which could be something executable, a file, variable, reserved word or hash
-and outputs what it is. The output could be:
-    'executable:builtin'
-    'executable:command'
-    'executable:function' 
-    'executable:file'
-    'file'                 # not executable but still could be source(able) code of some sort
-    'hashed'               # assumed to not be executable
-    'reserved'             # assumed to not be executable
-    'variable:scalar'*     
-    'variable:array'*
-    'variable:association'*
-                            # (no output) indicates input is not any of the above
-NOTE that there are more variable types than those listed above (as hinted at with the * wildcard)
-Beside the 'file' 'hashed' and 'reserved' outputs, 
-  all executable types are prepended with 'executable:' and 
-  all that are variables with 'variable:scalar' 
-Checks for non-variable types are performed first and the checks for variable are performed, even if the first check
-had a result. Therefore it is possible to have MORE THAN ONE RESULT, such as 'executable:function variable:scalar-export'
+    gdm_typeof accepts a string which could be something executable, a file, variable, reserved word or hash
+    and outputs what it is. The output could be:
+      'executable:builtin'
+      'executable:command'
+      'executable:function' 
+      'executable:file'
+      'file'                 # not executable but still could be source(able) code of some sort
+      'hashed'               # assumed to not be executable
+      'reserved'             # assumed to not be executable
+      'variable:scalar'*     
+      'variable:array'*
+      'variable:association'*
+                              # (no output) indicates input is not any of the above
+    NOTE that there are more variable types than those listed above (as hinted at with the * wildcard)
+    Beside the 'file' 'hashed' and 'reserved' outputs, 
+      all executable types are prepended with 'executable:' and 
+      all that are variables with 'variable:scalar' 
+    Checks for non-variable types are performed first and the checks for variable are performed, even if the first check
+    had a result. Therefore it is possible to have MORE THAN ONE RESULT, such as 'executable:function variable:scalar-export'
 USAGEDOC
     if [[ "$1" == --help ]] ; then return 0 ; else return 1 ; fi
   fi
@@ -136,7 +136,7 @@ USAGEDOC
       verbose="$(whence -v "$1")"
       first_word_of_alias_val="$(echo  ${verbose#* alias for } | head -n1 | awk '{print $1;}')"
       if [[ "$first_word_of_alias_val" == "$verbose" ]] ; then result=alias
-      elif [[ "$(getType $first_word_of_alias_val 2>/dev/null)" =~ ^'executable' ]] ; then result='executable:alias'
+      elif [[ "$(gdm_typeof $first_word_of_alias_val 2>/dev/null)" =~ ^'executable' ]] ; then result='executable:alias'
       else result=alias
       fi
       ;;
@@ -165,6 +165,125 @@ USAGEDOC
   return 0
 }
 
+gdm_quote() {
+  # takes one string variable name and outputs how to quote it as one of the following:
+  # "none" "double" "escaped double" "single" "escaped single"
+  # or... if none worked, just returns 1 without outputs
+  local varname="$1"
+  if [[ -z "${(P)varname}" ]] ; then print -n "'${(P)varname}'" ; return 1 ; fi # single quotes for empty
+  
+  local arr=()
+  eval "arr=(${(P)varname})" ; if (($#arr==1)) ; then
+    print -n "${(P)varname}" ;
+    # echo "\n$varname gets no quotes" >&2 #TEST
+    return 0 ; fi # no quotes
+  eval "arr=(\"${(P)varname}\")" ; if (($#arr==1)) ; then
+    print -n "\"${(P)varname}\"" ;
+    # echo "\n$varname gets escaped double" >&2 #TEST
+    return 0 ; fi # escaped double
+  eval "arr=('${(P)varname}')" ;   if (($#arr==1)) ; then
+    print -n "'${(P)varname}'" ;
+    # echo "\n$varname gets single" >&2 #TEST
+    return 0 ; fi # single
+  eval 'arr=("'${(P)varname}'")' ; if (($#arr==1)) ; then
+    print -n '"'${(P)varname}'"' ;
+    # echo "\n$varname gets double" >&2 #TEST
+    return 0 ; fi # double
+  eval "arr=(\'${(P)varname}\')" ; if (($#arr==1)) ; then
+    print -n "\'${(P)varname}\'" ;
+    # echo "\n$varname gets escaped single" >&2 #TEST
+    return 0 ; fi # escaped single
+  # echo "still here!!" >&2
+  return 1
+}
+
+gdm_varsToMapBody() {
+  # Input:  each arg should be a variable name
+  # Output: the body of an associative array (stuff between parens), assigning each
+  #         variable name (as associative key) to each variable name's value (as associative value.)
+  # Usage: 
+  #       eval "declare -A hash=( $(gdm_varsToMapBody var1 var3 var3) )"
+  #  or
+  #       local mapbody="$(gdm_varsToMapBody var1 var3 var3)"
+  #       eval "declare -A hash=( \"$mapbody\" )"  # this seem to require the \" \"
+  ! (($#)) && return 0 ;
+  # print -n "( "
+  for varname in $@ ; do print -n "[$varname]=$(gdm_quote $varname) " ; done
+  # print -n ")"
+}
+
+gdm_arrayLacksDups() {
+  # accepts an array name and returns number of duplicates, so if array=(a a b b b c)
+  # gdm_arrayLacksDups array    # would return 3 (the 1 extra a + 2 extra b)
+  eval 'actualsize=$#'$1
+  eval 'setsize=${#${(u)'$1'}}'
+  return $((actualsize-setsize))
+}
+
+
+gdm_echoMapBodyToVars() {
+  # Input: The body of an associative array (stuff between parens, i.e. the output from gdm_varsToMapBody)
+  # Output: A string assigning variables, each named as the key in the associative array, to their values.
+  # LIMITATIONS: This function expects all associative array values to be scalars. Keys must also be valid variable names.
+  # Options: Each flag option should be passed before the main input (body of an associative array)
+  #         --local               # declares each as local
+  #         --suffix=*            # sets string to place between each assignment (default is --suffix=" ; \n")
+  #         --require="key1 key2"
+  #         --require="$an_array" # Makes the function fail unless all required keys are found.
+  #         --allow-any=false     # Makes the function fail if any keys beside required are found
+  #         --allow-any=true
+  #         --allow-any           # Allows any key beside required
+  #         --allow="key3 key4"
+  #         --allow="$an_array"   # Makes the function fail if any key beside allow (and required, if provided) is found.
+
+  local decl=""
+  local suffix=" ; \n"
+  local required=() # array of required keys/variables
+  local allow_any=true  # true means allow any key. false mean only allow required and allowed.
+  local allowed=() # array of allowed keys/variables
+
+  while [[ "$1" =~ '^--local(=true)?$' ]] || [[ "$1" =~ '^--(suffix=.+|require=.+|allow-any|allow=.+)' ]] ; do
+    if [[ "$1" == '--local'* ]] ; then decl="local "
+    elif  [[ "$1" =~ '^--suffix=.+$' ]] ; then suffix="${1#*=}" 
+    elif [[ "$1" =~ '^--require=.+$' ]] ; then eval "required=( ${1#*=} )"
+    elif [[ "$1" =~ '^--allow-any(=true)?$' ]] ; then allow_any=true
+    elif [[ "$1" =~ '^--allow-any=false$' ]] ; then allow_any=false
+    elif [[ "$1" =~ '^--allow=.+$' ]] ; then eval "allowed=( ${1#*=} )"
+    fi
+    shift
+  done
+  
+  if ! (($#)) ; then echo "$(_S Y)WARNING: $0 received no arguments! $(_S)" >&2 ; return 1 ; fi
+
+  local map_body="$1" ; shift
+  # echo "map_body=$map_body" >&2 #TEST
+  if ! eval "declare -A temp_map=( $map_body )" ; then return 2 ; fi
+
+  if (($#required)) ; then
+    local missing=()
+    for key in $required ; do ! [[ $temp_map[(Ie)$key] ]] && missing+=($key) ; done
+    if (($#missing)) ; then echo "The following are keys are required weren't found: $missing" >&2 ; return 3 ; fi
+  fi
+  if ! $allow_any ; then
+    local not_allowed=()
+    allowed+=($required[@])
+    for key in "${(@k)temp_map}"; do ! (($allowed[(Ie)$key])) && not_allowed+=($key) ; done
+    if (($#not_allowed)) ; then echo "The following are keys are not allowed: $not_allowed" >&2 ; return 4 ; fi
+  fi
+
+  for key val in "${(@kv)temp_map}" ; do print -n -- "$decl$key=$(gdm_quote val)$suffix" ; done
+  unset temp_map # or maybe keep it? it seem to carry up to caller's scope
+}
+
+gdm_mapBody() { # (currently not used)
+  ! (($#)) && return 0 ;
+  local hash_name="$1"
+  # print -n "( "
+  eval "for key val in \"\${(@kv)$hash_name}\"; do print -n \"[\$key]=\$(gdm_quote val) \" ; done"
+  # print -n ")"
+}
+
+
 gdm_echoVars() {
   # gdm_echoVars accepts the the following, outputing the following by default:
   # variable names
@@ -189,6 +308,8 @@ gdm_echoVars() {
   local append_hash=false
   local decl=""
   local suffix=" ; \n"
+
+  local output=""
   
   local argnum=0
   for arg in $@ ; do ((argnum++))
@@ -212,28 +333,31 @@ gdm_echoVars() {
 
     # arg is a variable name so echo it according to options
     elif [[ -n "${(P)arg+set}" ]] ; then  
-      local name="$arg"
+      local varname="$arg"
 
-      if [[ "$(gdm_typeof $name)" =~ 'array' ]] ; then
-        if $append_array ; then print -n -- "$name+=($(print -- \"${^${(P)name}}\"))$suffix"
-        else print -n -- "$decl$name=($(print -- \"${^${(P)name}}\"))$suffix" 
+      if [[ "$(gdm_typeof $varname)" =~ 'array' ]] ; then
+        if $append_array ; then output+="$varname+=($(print -- \"${^${(P)varname}}\"))$suffix"
+        else output+="$decl$varname=($(print -- \"${^${(P)varname}}\"))$suffix" 
         fi
       
-      elif [[ "$(gdm_typeof $name)" =~ 'association' ]] ; then
-        if $append_hash ; then print -n -- "$name+=$(gdm_mapVal $name) ; "
-        elif [[ -z "$decl" ]] ; then print -n -- "$(typeset -p $name)$suffix"
-        else print -n -- "declare -A $name=$(gdm_mapVal $name)$suffix"
+      elif [[ "$(gdm_typeof $varname)" =~ 'association' ]] ; then
+        if $append_hash ; then output+="$varname+=$(gdm_mapVal $varname) ; "
+        elif [[ -z "$decl" ]] ; then output+="$(typeset -p $varname)$suffix"
+        else output+="declare -A $varname=$(gdm_mapVal $varname)$suffix"
         fi
 
-      else print -n -- "$decl${name}=\"${(P)name}\"$suffix"
+      else
+
+        output+="$decl${varname}=\"${(P)varname}\"$suffix"
       fi
 
     # Another custom bypass
-    elif [[ "$arg" =~ '^[a-zA-Z_]+[a-zA-Z0-9_]$' ]] ; then echo "$decl$arg=\"\"$suffix"  # just an (unset) variable name
+    elif [[ "$arg" =~ '^[a-zA-Z_]+[a-zA-Z0-9_]$' ]] ; then output+="$decl$arg=\"\"$suffix"  # just an (unset) variable name
 
     else echo "Warning: $0 was passed something it does not recognize:\"$arg\"" >&2 # perhaps a bad idea
     fi
   done
+  print -n "$output"
 }
 
 gdm_echoAndExec() {
@@ -384,7 +508,6 @@ function abspath(){
     result="${target:a}" # make absolute path via $PWD or /
     
   elif [[ -e "$wd" ]] ; then
-    echo "HERE" #TEST
     ! [[ -d "$wd" ]] && { print "Error: WD $wd: Not a directory" >&2 ; return 1 ; }
     result="(cd $wd && print ${target:a})" || return $? # output absolute path from path relative to existing path
   else

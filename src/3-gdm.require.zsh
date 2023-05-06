@@ -16,12 +16,6 @@ gdm.require() {
   else echo "$(_S G)Project found at $GDM_PROJ_ROOT$(_S)"  #TEST
   fi
 
-  # --reset-unlinked-register --reset-unlinked-instance --reset-unlinked-instance
-  # $force_re_register && force_re_require=true
-
-  local allow_orphan=true #TODO make this an argument option?
-  local unlinked_allow='--disallow-unlinked' ; $allow_orphan && unlinked_allow='--allow-unlinked'
-
 
   # load GDM_ERRORS (expand associate keys as local variables)
   if ! eval "$(gdm_unpack GDM_ERRORS --local --all)" ; then 
@@ -40,7 +34,7 @@ gdm.require() {
   # fi
   #TODO: handle errors similar to as we do with validation of required instance (later in this function)
   if ((reg_error)) ; then 
-    echo "$(_S R E)Registration of $@ failed!$(_S)" >&2
+    echo "$(_S R E)Registration of $@ failed! $(_S)" >&2
     local reason="$(gdm_keyOfMapWithVal GDM_ERRORS $reg_error)"
     ! [[ -z $reason ]] && echo "$(_S R E)Reason: $reason$(_S)" >&2 || echo "$(_S R E)Error code $reg_error$(_S)" >&2
     # TODO: add suggested fix
@@ -48,7 +42,7 @@ gdm.require() {
   fi
   # declare as local, all variables assigned in registration string:
   local $GDM_REGISTRATION_VARS # Used: remote_url hash tag setup register_id register_path required_path register_manifest register_snapshot
-  # NOT CURRENTLY USED: rev rev_is  branch to  register_parent prev_registered prev_registration_error register_created
+  # NOT CURRENTLY USED: rev rev_is  branch destin  register_parent prev_registered prev_registration_error register_created
   eval "$registration"
 
   
@@ -56,7 +50,7 @@ gdm.require() {
   #NOTE: If we are still here, we are done with registering (were registered without error)
   local required_manifest="$required_path/$register_id.$GDM_MANIF_EXT"
   local manif_valid_assigns="$(gdm_echoVars --local $GDM_MANIF_VALIDATABLES)" 
-  local validateReqInst_args=(--required --show-output $unlinked_allow $required_manifest $required_path $register_snapshot $manif_valid_assigns $GDM_MANIF_VALIDATABLES)
+  local validateReqInst_args=(--required --show-output $required_manifest $required_path $register_snapshot $manif_valid_assigns $GDM_MANIF_VALIDATABLES)
 
 
   #----- IF REQUIREMENT WAS PREVIOUSLY INSTALLED WITH VALID MANIFEST, RETURN  -------------------------------
@@ -153,7 +147,7 @@ gdm.require() {
 
   ##### FINAL OR NON-RECOVERABLE REQUIREMENT INSTALLATION ERRORS ######################################################
   if ((required_instance_err)) ; then 
-    echo "$(_S R E)Installation of $@ failed!$(_S)" >&2
+    echo "$(_S R E)Installation of $@ failed! $(_S)" >&2
     local reason="$(gdm_keyOfMapWithVal GDM_ERRORS $required_instance_err)"
     ! [[ -z $reason ]] && echo "$(_S R E)Reason: $reason$(_S)" >&2 || echo "$(_S R E)Error code $required_instance_err$(_S)" >&2
     # TODO: add suggested fix
@@ -161,9 +155,3 @@ gdm.require() {
     return $required_instance_err
   fi
 }
-
-
-
-
-
-
