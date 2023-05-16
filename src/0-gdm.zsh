@@ -90,6 +90,7 @@ declare -Ag GDM_ERRORS=(
   [required_manifest_unlinked]=38             # --disallow-unlinked (not the default) and $required_manifest has no hardlinks
 
   # gdm.register errors:
+  [invalid_config_entry]=40
   [clone_failed]=41 
   [checkout_failed]=42
   [setup_returned_error]=43
@@ -152,12 +153,19 @@ export GDM_MIN_HASH_LEN=7
 # NOTE: additional exported variables are in *-gdm-project.zsh
 
 # currently accepted GDM_EXPERIMENTAL element values: (NOTE: ALL ARE VERY DANGEROUS TO FILESYSTEM)
-# flexible_required_paths     (allow require installation destinations outside of project's GDM_REQUIRED dir)
-# any_required_path     (allow project's GDM_REQUIRED dir to be in any location)
+# any_GDM_REQUIRED_path             (allow project's GDM_REQUIRED dir to be in any location)
+# allow_destin_relto_HOME           (allow require destin='~/'*)
+# allow_destin_relto_SYSTEM_ROOT    (allow require destin='/'*)
+# allow_destin_relto_GDM_PROJ_ROOT  (allow require destin='./'* and require  destin='../'*)
+# allow_nonflat_GDM_REQUIRED        (beside normal require destin=dir, allow require destin=dir/subdir)
+
 if [[ "$(print -rl -- ${(t)GDM_EXPERIMENTAL} 2>/dev/null)" =~ 'array' ]] ; then
     export GDM_EXPERIMENTAL # user has provided so just export to be safe
 else export GDM_EXPERIMENTAL=() # add experiemental modes to always enable if user does not specify
 fi
+
+export GDM_CALL_OPER="" # CL caller argument identifying a method (a gdm.$GDM_CALL_OPER function) or config
+export GDM_CALL_ARGS=() # CL caller arguments after (not including) the GDM_CALL_OPER argument
 
 # CALLED AFTER EVERYTHING IS SOURCED:
 gdm.main() {
@@ -169,12 +177,11 @@ gdm.main() {
   fi
 
   # local operations_wo_proj=(error) # TODO allow these operations to be called without project 
-  GDM_CALL_ARGS=("$@")
-  local operation="$1"
+  GDM_CALL_OPER="$1"
   shift
+  GDM_CALL_ARGS=("$@")
   
-  
-  if [[ "$operation" =~ '^[-]{0,2}init(ialize)?$' ]] ; then 
+  if [[ "$GDM_CALL_OPER" =~ '^[-]{0,2}init(ialize)?$' ]] ; then 
     gdm.project --init $@  ; return $?
   fi
 
@@ -182,7 +189,7 @@ gdm.main() {
   local non_proj_operations=(project)
 
   # Ensure we run gdm.project for all operations requiring a project (i.e. are not in non_proj_operations)
-  if ! (($non_proj_operations[(Ie)$operation])) ; then
+  if ! (($non_proj_operations[(Ie)$GDM_CALL_OPER])) ; then
     local proj_err
     # DO NOT execute gdm.project in subshell i.e. capture
     gdm.project --traverse-parents --validate-version --validate-script #FUNCTION CALL: gdm.register
@@ -203,8 +210,8 @@ gdm.main() {
   
 
 
-  if [[ "$operation" == 'config' ]] ||  [[ "$operation" == 'install' ]] ; then
-    echo "$operation called"  #TEST
+  if [[ "$GDM_CALL_OPER" == 'config' ]] || ; then
+    echo "$GDM_CALL_OPER called"  #TEST
     if [[ -z "$GDM_PROJ_ROOT" ]] ; then
       local err_code
       echo "calling gdm.project" #TEST
@@ -219,8 +226,8 @@ gdm.main() {
 
     if (($#)) ; then
       echo "$(_S G)HERE$(_S)" #TEST
-      if [[ "$operation" == 'config' ]] ; then echo "$(_S R)Unexpected additional argument(s):$@$(_S)" >&2 ; return 1
-      else # "$operation" == 'install'
+      if [[ "$GDM_CALL_OPER" == 'config' ]] ; then echo "$(_S R)Unexpected additional argument(s):$@$(_S)" >&2 ; return 1
+      else # "$GDM_CALL_OPER" == 'install'
         gdm.require "${@}"
         return $?
       fi
@@ -243,14 +250,14 @@ gdm.main() {
     fi
   
   # METHOD CALL MODE:
-  elif [[ "$(gdm_typeof gdm.$operation)" =~ 'function' ]] ; then
-    echo "gdm is executing gdm.$operation $@" #TEST
-    gdm.$operation "$@" 
+  elif [[ "$(gdm_typeof gdm.$GDM_CALL_OPER)" =~ 'function' ]] ; then
+    echo "gdm is executing gdm.$GDM_CALL_OPER $@" #TEST
+    gdm.$GDM_CALL_OPER "$@" 
     return $?
 
   # UNKNOWN OPERATION
   else
-    echo "$(_S R)gdm failed due to unknown option: $(_S G)$operation$(_S)" ; return 127
+    echo "$(_S R)gdm failed due to unknown option: $(_S G)$GDM_CALL_OPER$(_S)" ; return 127
   fi
   return $?
 }

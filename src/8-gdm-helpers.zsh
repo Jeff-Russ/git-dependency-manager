@@ -121,47 +121,52 @@ USAGEDOC
     if [[ "$1" == --help ]] ; then return 0 ; else return 1 ; fi
   fi
 
-  local result=""
+  local _result=""
 	local cap="$(whence -w "$1" 2>/dev/null)"  # `-w` show if alias,  builtin,  command,  function, hashed, reserved or none
   local whenceType="$(echo "$cap" | awk '{print $NF}')"
   case $whenceType in
     function|builtin) 
-      result="executable:$whenceType"
+      _result="executable:$whenceType"
       ;;
     command)
-      if [[ -f "$1" ]] && [[ -x "$1" ]] ; then result="executable:file" ; else result="executable:command" ; fi
+      if [[ -f "$1" ]] && [[ -x "$1" ]] ; then _result="executable:file" ; else _result="executable:command" ; fi
       ;;
     alias)
       local verbose first_word_of_alias_val
       verbose="$(whence -v "$1")"
       first_word_of_alias_val="$(echo  ${verbose#* alias for } | head -n1 | awk '{print $1;}')"
-      if [[ "$first_word_of_alias_val" == "$verbose" ]] ; then result=alias
-      elif [[ "$(gdm_typeof $first_word_of_alias_val 2>/dev/null)" =~ ^'executable' ]] ; then result='executable:alias'
-      else result=alias
+      if [[ "$first_word_of_alias_val" == "$verbose" ]] ; then _result=alias
+      elif [[ "$(gdm_typeof $first_word_of_alias_val 2>/dev/null)" =~ ^'executable' ]] ; then _result='executable:alias'
+      else _result=alias
       fi
       ;;
     *)  # hashed, reserved or none
       if [[ "$whenceType" == 'none' ]] ; then
         if [[ -f "$1" ]] ; then 
-          if [[ -x "$1" ]] ; then result='executable:file' ; else result='file' ; fi
+          if [[ -x "$1" ]] ; then _result='executable:file' ; else _result='file' ; fi
         fi
-      else result="$whenceType"
+      else _result="$whenceType"
       fi
       ;; 
   esac
 
   if eval "(( \${+$1} ))" 2>/dev/null ; then  # if a variable... get type
     # the following two lines are, if we knew the var was called var, equiv to: print -rl -- ${(t)var}
-    local operand='${(t)'"$1"'}'
-    local vartype="$(eval "print -rl -- $operand" 2>/dev/null)"
+
+    # local operand='${(t)'"$1"'}'
+    # local vartype="$(eval "print -rl -- $operand" 2>/dev/null)"
+    #UPDATE: the above can be done with one line:
+    local vartype="$(eval "print -rl -- \${(t)$1}" 2>/dev/null)"
+
     if ! [[ -z "$vartype" ]] ; then
-      if [[ -z "$result" ]] ; then result="variable:$vartype"
-      else result="$result variable:$vartype"
+      if [[ -z "$_result" ]] ; then _result="variable:$vartype"
+      else _result="$_result variable:$vartype"
       fi
     fi
   fi
-  [[ -z "$result" ]] && return 1
-  echo "$result"
+
+  [[ -z "$_result" ]] && return 1
+  echo "$_result"
   return 0
 }
 
@@ -170,7 +175,10 @@ gdm_quote() {
   # "none" "double" "escaped double" "single" "escaped single"
   # or... if none worked, just returns 1 without outputs
   local varname="$1"
-  if [[ -z "${(P)varname}" ]] ; then print -n "'${(P)varname}'" ; return 1 ; fi # single quotes for empty
+  if [[ -z "${(P)varname}" ]] ; then
+    if ! gdm_datatype $varname >/dev/null ; then local _tempvar="$1" ; varname=_tempvar # allow for direct values (not varnames)
+    else print -n "'${(P)varname}'" ; return 1 ; fi
+  fi # single quotes for empty
   
   local arr=()
   eval "arr=(${(P)varname})" ; if (($#arr==1)) ; then
@@ -212,12 +220,13 @@ gdm_varsToMapBody() {
   # print -n ")"
 }
 
-gdm_arrayLacksDups() {
-  # accepts an array name and returns number of duplicates, so if array=(a a b b b c)
-  # gdm_arrayLacksDups array    # would return 3 (the 1 extra a + 2 extra b)
-  eval 'actualsize=$#'$1
-  eval 'setsize=${#${(u)'$1'}}'
-  return $((actualsize-setsize))
+gdm_argsToString() {
+  # TODO compacts arguments to a string which can be used to make the array again
+}
+
+gdm_datatype() { # quicker than gdm_typeof... for when you don't care if it's a non-data type
+  local datatype="$(eval "print -rl -- \${(t)$1}" 2>/dev/null)"
+  [[ -z "$datatype" ]] && return 1 || echo "$datatype" ;
 }
 
 
@@ -382,7 +391,7 @@ gdm_echoAndExec() {
   if ((err_code)) ; then echo "$err_cap$(_S R S)Terminating due to previous command returning error code $err_code$(_S)" >&2 ; return $err_code ; fi
 }
 
-gdm_mapDecl() { local result ; result="$(typeset -p "$1")" || return $? ; } # unused
+gdm_mapDecl() { local _result ; _result="$(typeset -p "$1")" || return $? ; } # unused
 
 # $1 is name of associative array, $1 is key found in it
 gdm_keyOfMapWithVal() { local evalable="\${(k)$1[(r)$2]}" ; eval "echo $evalable" || return $? ; }
@@ -477,7 +486,7 @@ gdm_unpack() {
 # ! which abspath 2>/dev/null 1>&2 && #TODO: uncomment this line
 function abspath(){ 
   if [[ -z "$1" ]] || (($#>2)) || [[ "$1" == --help ]] ; then
-    print "abspath outputs an absolute path from \$1, relative path (which need not exist)" >&2
+    print "abspath outputs an absolute path from a relative path, \$1, (which need not exist)" >&2
     print "        that is relative to a path \$2 (which also need not exist).\nUsage:" >&2
     print "  abspath \$relpath [\$wd_of_relpath] # where the 2nd argument defaults to \$PWD\nCaveats:" >&2
     print "  If the second argument is a relative path, it is assumed to be relative to \$PWD." >&2
@@ -502,14 +511,14 @@ function abspath(){
     print "$target" ; return 1
   }
 
-  local result non_dir
+  local _result non_dir
 
   if [[ -z "$wd" ]] || [[ "$wd" == "$PWD" ]] || [[ "$wd" == '/' ]]  ; then
-    result="${target:a}" # make absolute path via $PWD or /
+    _result="${target:a}" # make absolute path via $PWD or /
     
   elif [[ -e "$wd" ]] ; then
     ! [[ -d "$wd" ]] && { print "Error: WD $wd: Not a directory" >&2 ; return 1 ; }
-    result="(cd $wd && print ${target:a})" || return $? # output absolute path from path relative to existing path
+    _result="$(cd $wd && print ${target:a})" || return $? # output absolute path from path relative to existing path
   else
     # else make absolute path from a path relative to a non-existing working dir by temporarily creating the working dir
     local path_segs=( ${(s:/:)wd} )    # split by '/' delimiter (lack of quotes around expansion prevents empty elements).
@@ -518,14 +527,14 @@ function abspath(){
     while [[ -d "$nonexist" ]] && ((i<=$#path_segs)) ; do nonexist+="/${path_segs[$((i++))]}" ; done # accum up to non-existent segment
     [[ -e "$nonexist" ]] && { print "Error: WD contains $nonexist: Not a directory" >&2 ; return 1 ; }
     mkdir -p "$wd" || return $?            # Make temp directory(s). This will fail if, for example, making the path effectively adds a new user $HOME
-    result="(cd $wd && print ${target:a})" # Make absolute path from path relative to temp path
+    _result="$(cd $wd && print ${target:a})" # Make absolute path from path relative to temp path
     rm -rf "$nonexist"                     # Clean up temp directory(s) by removing them.
   fi
 
-  if ! non_dir="$(showErroneousNonDirInAbsPath $result)" ; then
+  if ! non_dir="$(showErroneousNonDirInAbsPath $_result)" ; then
     print "Error: path contains $non_dir: Not a directory" >&2 ; return 1 ;
   else
-    print "$result"
+    print "$_result"
     return 0
   fi
 }
@@ -535,6 +544,7 @@ function abspath(){
 function relpath(){
   # based on: https://stackoverflow.com/a/14914070
   # NOTE: requires abspath and, as such, errors output the same stderr with same return of 1
+  #IMPORTANT: DOES NOT pepend ./ or ~/
   if [[ -z "$1" ]] || (($#>2)) || [[ "$1" == --help ]] ; then
     echo "$0 requires one or two arguments: a path string to be converted to a path" >&2
     echo "relative to the second argument or relative to \$PWD if no second argument given." >&2
@@ -635,3 +645,124 @@ gdm_autoRename() {
   ((ret==0)) && echo "$newpath"
   return $ret
 }
+
+
+gdm_arrayReorderIdx() {
+  # USAGE:    gdm_arrayRmIdx input_array [--to=output_array] [--allow-empty] [all|any-to-one|any] ordering_array|int...
+  #      Note that input_array and ordering_array|int... must be the first and last argument, respectively 
+  #      but the flag arguments can be at any position between,
+  # DESCRIPTION: gdm_arrayReorderIdx reorders elements of 
+  #   input_array passed by name either by directly mutating the input_array (the default) OR
+  #   --to=*         (option) by writing to output_array array passed by name to --to=output_array
+  #   --allow-empty (option) allows you to insert empty elements by placing out-of-range indices in ordering_array
+  #   enforcing one of the following restriction (be aware that out-of-bounds indices with --allow-empty don't count toward duplicates):
+  #      --any-to-any (default) ALLLOWS  the final array to omit any input_array element,     ALLOWING   duplicates OR
+  #      --any-to-one           ALLLOWS  the final array to omit any input_array element,     PREVENTING duplicates OR
+  #      --all-to-any           REQUIRES the final array to contain all input_array elements, ALLOWING   duplicates OR
+  #      --all-to-one           REQUIRES the final array to contain all input_array elements, PREVENTING duplicates OR
+  #   ordering_array, an array passed by name or as all subsquent arguments, defines new sequence (ordering_array indices 
+  #     are the final array indices) of indices (ordering_array values are the original indices in input_array)
+  # EXAMPLES: (each line starts with ar being equal to ar=(one two three four five) )
+  #     gdm_arrayReorderIdx ar --to=to 5 4 3 3 1 # to=(five four three three one) and ar is untouched
+  #     order=( 5 4 3 3 1 "")
+  #     gdm_arrayReorderIdx ar ${order[1,-2]} # ar=(five four three three one) and ar is untouched
+  #     all_w_dup=( 1 3 5 4 4 2 ) ; # fine with any-to-any or all-to-any 
+  #     gdm_arrayReorderIdx ar any-to-one all_w_dup # ERROR in gdm_arrayReorderIdx with mode=any-to-one: ordering_array 'all_w_dup' has 1 duplicate indices(s)
+  #     # same as above with all-to-one
+  #     gdm_arrayReorderIdx ar all-to-one 3 2 # ERROR in gdm_arrayReorderIdx with mode=all-to-one: ordering array lacks 3 indices(s)
+  #     # same as above with all-to-any
+  # REQUIRES: gdm_arrayToInts gdm_arraySortNum and, for now gdm_typeCheck
+
+
+  # Get source and make sure it's a non-empty array or scalar:
+  local a_name_in="$1" ; shift
+  ! gdm_typeCheck $a_name_in array scalar && { echo "ERROR in $0: input array '$a_name_in' not an array or scalar" >&2 ; return 1 ; }
+  ((${#${(P)a_name_in}}==0)) && { echo "ERROR in $0: input '$a_name_in' is empty" >&2 ; return 2 ; }
+  local a_name_out="$a_name_in"
+
+  # Parse options:
+  local mode=any-to-any ; 
+  local allow_empty=false
+  while [[ "$1" =~ '^--(allow-empty|to=.+)$' ]] || [[ "$1" =~ '^--(all|any)-to-(one|1|any)$' ]] ; do
+    if [[ "$1" == '--allow-empty' ]] ; then allow_empty=true
+    elif [[ "$1" =~ '^--to=.+' ]] ; then a_name_out="${1#*=}" 
+    elif [[ "$1" =~ '^--(all|any)-to-(one|1|any)$' ]] ; then mode="${1#*--}" ; [[ $mode[-1] == 1 ]] && mode=$mode[1,-2]one ;
+    else echo "ERROR in $0: invalid flag: '$1'" >&2 ; return 3 ;
+    fi
+    shift
+  done 
+
+  # Get ordering array and convert it to ints so the format is sortable
+  local _order_arr 
+  local show_order_arr="" # for error display
+  if (($#==1)) ; then # First, make sure ordering array is a non-empty array
+    ! gdm_typeCheck $1 array && { echo "ERROR in $0: ordering array '$1' is not an array" >&2 ; return 4 ;  }
+    eval '_order_arr=("${'$1'[@]}")' ; show_order_arr=" '$1'" 
+    (($#_order_arr==0)) && { echo "ERROR in $0: ordering array '$1' is empty" >&2 ; return 5 ; } 
+  else  _order_arr=("$@")  ;
+  fi  
+  gdm_arrayToInts _order_arr
+
+
+  # To some advanced validate of the _order_arr to make sure it doesn't violate any option:
+  if ! $allow_empty || [[ $mode != any-to-any ]] ; then
+    local _order_sort ; gdm_arraySortNum _order_arr _order_sort # create sorted version of _order_arr
+
+    local _in_bounds_indices=( "${_order_sort[@]}" ) # _order_sort with under and over bounds indices removed:
+    while (($_in_bounds_indices[1]<1)) ; do _in_bounds_indices[1]=() ; done
+    while (($_in_bounds_indices[-1]>${#${(P)a_name_in}})) ; do _in_bounds_indices[-1]=() ; done
+
+    if ! $allow_empty && (($#_in_bounds_indices!=$#_order_sort)) ; then 
+      echo "ERROR in $0: ordering_array$show_order_arr out of bounds index(es)" >&2 ; return 6 ;
+    fi
+
+    if [[ $mode != any-to-any ]] ; then 
+      local _in_bounds_unique=( "${(u)_in_bounds_indices[@]}" )
+      if [[ $mode == *'-to-one' ]] ; then 
+        local dups=$(($#_in_bounds_indices-$#_in_bounds_unique))
+        ((dups)) && { echo "ERROR in $0 with mode=$mode: ordering_array$show_order_arr has $dups duplicate indices(s)" >&2 ; return 7 ; }
+      fi
+      if [[ $mode == 'all-to-'* ]] ; then
+        local missings=$((${#${(P)a_name_in}}-$#_in_bounds_unique))
+        ((missings)) && { echo "ERROR in $0 with mode=$mode: ordering array$show_order_arr lacks $missings indices(s)" >&2 ; return 8 ; }
+      fi
+    fi
+    
+  fi
+
+  local _temp_st=""
+  for old_index in "${_order_arr[@]}" ; do
+    _temp_st+='"${'$a_name_in'['$old_index']}" '
+  done
+  eval $a_name_out'=( '"$_temp_st"' )'
+}
+
+
+gdm_typeCheck() {
+  # Usage cases:
+  #  1) Test if a variable is iterable:
+  #     gdm_typeCheck a_string scalar array    # returns 0 because a string is a scalar 
+  #     gdm_typeCheck assoc_array scalar array # returns 1 because not a scalar or an array
+  #  1) Test if a variable is unset:
+  #      gdm_typeCheck unset_var '^$'           # returns 0 unset_var has no type, matching ^$'
+  #      gdm_typeCheck an_array '^$' array      # returns 0 an_array is an array
+  local varname="$1" ; local typetest="" ; local arg
+  for arg in $@ ; do typetest+="$arg|" ; done
+  [[ "$(eval "print -rl -- \${(t)$1}" 2>/dev/null)" =~ '('"${typetest[1,-2]}"')' ]] && return 0 || return 1 ;
+}
+
+gdm_arrayToInts() {
+  local _arr_in="$1" ; [[ -z "$_arr_in" ]] && return 1 ;
+  local _arr_out="$2" ; [[ -z "$_arr_out" ]] && _arr_out="$_arr_in"
+  local i 
+  for i in {1..${#${(P)1}}} ; do  eval $_arr_out'['$i']='$(printf "%.0f" ${(P)${_arr_in}[$i]}) ; done
+}
+
+gdm_arraySortNum() {
+  local a_name_in a_name_out a ; local _sort='-n'
+  for a in $@ ; do [[ "$a" =~ '^(-r|--reversed?)$' ]] && _sort='-rn' || { [[ -z $a_name_in ]] && a_name_in=$a || a_name_out=$a ; } ; done
+  [[ -z $a_name_in ]] && return 1 ;
+  [[ -z $a_name_out ]] && a_name_out=$a_name_in ;
+  eval $a_name_out'=( $(printf "%s\n" "${'$a_name_in'[@]}" | sort '$_sort') )'   # 0-1 WORKS!
+}
+

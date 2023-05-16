@@ -1,29 +1,28 @@
 
-
+# NOTE: GDM_CONFIG_LOCK_KEYS=(destin remote_url rev setup hash tag branch rev_is setup_hash) 
 # Output associative array variable keys from gdm.parseRequirement --QUICKLOCK (called in "QUICK LOCK mode"):
-export GDM_REQUIREMENT_QUICKLOCK_KEYS=( required_path destin remote_url rev setup hash tag branch rev_is setup_hash  #<- all but required_path are GDM_CONFIG_LOCK_KEYS
+export GDM_REQUIREMENT_QUICKLOCKKEYS=( required_path destin remote_url rev setup hash tag branch rev_is setup_hash  #<- all but required_path are GDM_CONFIG_LOCK_KEYS
           register_parent register_id path_in_registry register_path register_manifest register_snapshot lock_entry)
 #       required_path destin remote_url rev setup
 #       hash tag branch rev_is setup_hash lock_entry register_parent register_id path_in_registry register_path register_manifest register_snapshot 
 
 # Output variables from gdm.parseRequirement --IS_LOCK (called in "LOCK mode"):
-export GDM_REQUIREMENT_LOCK_VARS=( "${GDM_REQUIREMENT_QUICKLOCK_KEYS[@]}" prev_registered prev_registration_error)
+export GDM_REQUIREMENT_LOCKVARS=( "${GDM_REQUIREMENT_QUICKLOCKKEYS[@]}" prev_registered prev_registration_error)
 #       required_path destin remote_url rev setup
 #       hash tag branch rev_is setup_hash lock_entry register_parent register_id path_in_registry register_path register_manifest register_snapshot 
 #       prev_registered prev_registration_error
 
 # Output variables from gdm.parseRequirement (called in "NORMAL mode"):
-export GDM_REQUIREMENT_VARS=( repo_identifier remote_ref "${GDM_REQUIREMENT_LOCK_VARS[@]}" ) # (the full set)
+export GDM_REQUIREMENT_VARS=( "${GDM_REQUIREMENT_LOCKVARS[@]}" repo_identifier remote_ref ) # (the full set)
 #       required_path destin remote_url rev setup
 #       hash tag branch rev_is setup_hash lock_entry register_parent register_id path_in_registry register_path register_manifest register_snapshot 
 #       repo_identifier remote_ref 
 #       prev_registered prev_registration_error
 
 # Output variables from gdm.parseRequirement --QUICK (called in "QUICK mode"):
-export GDM_REQUIREMENT_QUICK_VARS=(repo_identifier remote_ref destin remote_url rev setup required_path)
+export GDM_REQUIREMENT_QUICKVARS=( destin remote_url rev setup required_path repo_identifier remote_ref )
 #       required_path destin remote_url rev setup
 #       repo_identifier remote_ref  
-
 
 
 #NOTE: gdm.parseRequirement will give different results for different values of GDM_REGISTRY and, 
@@ -42,7 +41,7 @@ gdm.parseRequirement() {
   #      (1st arg is referred to here as $repo_identifier and the remaining are unordered)
 
 
-  # Output is a string assigning the following:                           BLANK? SET BY/FROM
+  # OUTPUT: is a string assigning the following:                           BLANK? SET BY/FROM
   #   For all modes:
   #     required_path=<full abs path to location where required>          never  destin
   #     destin=<name>|<normalized relpath>|<normalized abspath>           never  parseRequirement (interpreted as unique key for a requirement)
@@ -68,6 +67,20 @@ gdm.parseRequirement() {
   #   For NORMAL and LOCK modes only (non QUICK modes):
   #     prev_registered=true|false                                        never  parseRequirement
   #     prev_registration_error=<GDM_ERRORS value>                        maybe NEW: if not previously registered, there is no error
+  #
+  # ERROR REASON (all returns are keys in GDM_ERRORS)
+  #         Return:                 Applicable modes:                    Cause:               
+  #     invalid_argument          NORMAL, QUICK, LOCK, QUICK_LOCK    no arguments received
+  #     invalid_argument          LOCK, QUICK_LOCK                   lock entry empty,  missing keys or fails eval
+  #     invalid_argument          NORMAL, QUICK                      unknown option
+  #     multiple_setups_args      NORMAL, QUICK                      (self explanitory)
+  #     invalid_setup             NORMAL, QUICK                      setup: is script outside proj_root or unloadable, not a script/function, can't be hashed
+  #     invalid_destination_arg   NORMAL, QUICK                      (see comments in gdm_expandDestination definition)
+  #     cannot_expand_remote_url  NORMAL, QUICK                      NORMAL: gdm_expandRemoteRef failed QUICK: gdm_gitExpandRemoteUrl failed
+  #     cannot_find_revision      NORMAL                             from gdm_expandRemoteRef's return
+  #     cannot_find_branch        NORMAL                             from gdm_expandRemoteRef's return
+  #     cannot_find_tag           NORMAL                             from gdm_expandRemoteRef's return
+  #     cannot_find_hash          NORMAL                             from gdm_expandRemoteRef's return
 
 
   #NOTE ON PERFORMANCE: The biggest time hogs are gdm_expandRemoteRef and gdm_validateInstance
@@ -78,10 +91,11 @@ gdm.parseRequirement() {
   local quick_parse=false # Bypasses gdm_expandRemoteRef and gdm_validateInstance
 
   while [[ "$1" =~ '^--.+' ]] ; do
-    if [[ "$1" =~ '^--QUICK(-)?LOCK?' ]] ; then quick_parse=true ; is_lock=true
-    elif [[ "$1" =~ '^--QUICK(-PARSE)?' ]] ; then quick_parse=true # must come after quicklock check
-    elif [[ "$1" =~ '^--(IS-)?LOCK' ]] ; then is_lock=true 
-    elif [[ "$1" =~ '^--NORMAL' ]] ; then quick_parse=false ; is_lock=false 
+    arg="${1:u}"
+    if [[ "$arg" =~ '^--QUICK[-_]?LOCK' ]] ; then quick_parse=true ; is_lock=true
+    elif [[ "$arg" =~ '^--QUICK([-_]PARSE)?' ]] ; then quick_parse=true # must come after quicklock check
+    elif [[ "$arg" =~ '^--(IS[-_])?LOCK' ]] ; then is_lock=true 
+    elif [[ "$arg" =~ '^--NORMAL' ]] ; then quick_parse=false ; is_lock=false 
     fi
     shift
   done
@@ -90,11 +104,15 @@ gdm.parseRequirement() {
 
   local outputVars
   if $is_lock ; then
-    if $quick_parse ; then  outputVars=("${GDM_REQUIREMENT_QUICKLOCK_KEYS[@]}") # $is_lock && $quick_parse "QUICK LOCK mode"
-    else                    outputVars=("${GDM_REQUIREMENT_LOCK_VARS[@]}")       # $is_lock && ! $quick_parse "LOCK mode"
+    if $quick_parse ; then  outputVars=("${GDM_REQUIREMENT_QUICKLOCKKEYS[@]}") # $is_lock && $quick_parse "QUICK LOCK mode"
+      # echo "$0 QUICK LOCK mode" >&2 ; print -l "  "${^@}  >&2 #TEST
+    else                    outputVars=("${GDM_REQUIREMENT_LOCKVARS[@]}")      # $is_lock && ! $quick_parse "LOCK mode"
+      # echo "$0 LOCK mode" >&2 ; print -l "  "${^@}  >&2 #TEST
     fi
-  elif $quick_parse ; then  outputVars=("${GDM_REQUIREMENT_QUICK_VARS[@]}")         # ! $is_lock && $quick_parse "QUICK mode"
+  elif $quick_parse ; then  outputVars=("${GDM_REQUIREMENT_QUICKVARS[@]}")         # ! $is_lock && $quick_parse "QUICK mode"
+    # echo "$0 QUICK mode" >&2 ; print -l "  "${^@}  >&2 #TEST
   else                      outputVars=("${GDM_REQUIREMENT_VARS[@]}")               # ! $is_lock && ! $quick_parse "NORMAL mode"
+    # echo "$0 NORMAL mode" >&2 ; print -l "  "${^@}  >&2 #TEST
   fi
   local $outputVars # declare all output vars (even though we may not use all) 
   #NOTE: do we need to reset any $outputVars??
@@ -112,7 +130,8 @@ gdm.parseRequirement() {
     if ! $quick_parse ; then #------------------------- NORMAL mode: gdm_expandRemoteRef ------------------------------
       # OUTPUT VARS SET HERE: remote_ref rev remote_url rev_is hash tag branch (non-output vars: regis_prefix)
       local requirement  # assigns: remote_ref rev remote_url rev_is hash tag branch
-      ! requirement="$(gdm_expandRemoteRef "$repo_identifier")" && return $?
+      ! requirement="$(gdm_expandRemoteRef "$repo_identifier")" && return $? 
+      #NOTE: $? from gdm_expandRemoteRef: cannot_expand_remote_url cannot_find_(revision|branch|tag|hash)
       eval "$requirement" ; # all requirement vars are set but rev, branch, tag may be empty.
       local regis_prefix=$hash
     
@@ -121,7 +140,7 @@ gdm.parseRequirement() {
       # OUTPUT VARS SET HERE: remote_ref rev remote_url
       # (Since we don't parse rev, we get no: rev_is hash tag branch) (and without hash we have no: regis_prefix )
       remote_ref="${repo_identifier%#*}"
-      rev="${repo_identifier##*#}"
+      rev="${repo_identifier##*#}" ; [[ "$rev" ==  "$remote_ref" ]] && rev=""
       if ! remote_url="$( gdm_gitExpandRemoteUrl "$remote_ref" )" || [[ -z "$remote_url" ]] ; then
         return $GDM_ERRORS[cannot_expand_remote_url]
       fi
@@ -131,23 +150,24 @@ gdm.parseRequirement() {
     # OUTPUT VARS SET HERE: setup destin -> required_path 
     # AND, IF NORMAL MODE : lock_entry setup_hash (from non-output: regis_suffix)
     # NOTE: can't set lock_entry if QUICK mode because we lack setup_hash
+    # POSSIBLE ERRORS: multiple_setups_args
     for arg in $@ ; do
       # Parse if setup argument:
       if [[ "${arg:l}" =~ '^-{0,2}(s|setup)[=].+' ]] ; then
         if ! [[ -z "$setup" ]] ; then gdm_multiArgError "$1" '`setup` arguments' ; return $multiple_setups_args ; fi
         setup="${arg#*=}" 
         if ! $quick_parse ; then
-          setup_hash=$(gdm_setupToHash "$setup") || return $?
+          setup_hash=$(gdm_setupToHash "$setup") || return $? # $GDM_ERRORS[invalid_setup] (previously also return 1 for $0.strToHash failure)
           local regis_suffix="-$setup_hash"
         fi
       # Parse if destin argument:
       elif [[ "${arg:l}" =~ '^-{0,2}d(est|estin|estination|ir|irectory)?=.+' ]] ; then
-        if ! [[ -z "$required_path" ]] ; then gdm_multiArgError "$1" 'detination options' ; return $multiple_destination_args ; fi
-        if ! gdm_isNonPathStr "${arg#*=}" ; then  # TODO: perhaps allow dir/subdir (just prevent starting with ../ ./ or /) or maybe anything in proj
-          echo "$(_S R S)Invalid destination argument: $arg Value must be a directory name and not a path! $(_S)" >&2  ; return $GDM_ERRORS[invalid_destination_arg]
-        fi
-        destin="${arg#*=}"
-        required_path="$GDM_PROJ_ROOT/$GDM_REQUIRED/${arg#*=}"
+        #NOTE: outputVars from gdm_expandDestination are destin destin_relto required_path. All already local except:
+        local destin_relto #TODO: This should one day maybe be in our outputVars but for now we only allow destin_relto='GDM_REQUIRED
+        destin="${arg#*=}" #NOTE: this may be modified (standardized) by gdm_expandDestination
+        local assignments
+        assignments="$(gdm_expandDestination $destin)" || return $? # always 0 or $GDM_ERRORS[invalid_destination_arg]
+        eval "$assignments" # sets: destin destin_relto required_path
       # ERROR if else:
       else echo "$(_S R S)Invalid argument: $arg$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument] 
       fi
@@ -183,14 +203,14 @@ gdm.parseRequirement() {
 
     local assigments_or_stderr # or an error
     if ! assigments_or_stderr="$(gdm_echoMapBodyToVars --require="$GDM_CONFIG_LOCK_KEYS" $lock_entry 2>&1)" ; then
-      echo "$(_S R S)The following config_lock element is is invalid:\n$(_S)$lock_entry\n$(_S R S)$assigments_or_stderr$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument] 
+      echo "$(_S R S)The following config_lock element is is invalid:\n$(_S)  $lock_entry\n$(_S R S)$assigments_or_stderr$(_S)" >&2 ; return $GDM_ERRORS[invalid_argument] 
     fi
     # echo "assigments_or_stderr is:\n$assigments_or_stderr" && return #TEST
 
     local eval_err
     eval "$assigments_or_stderr" ; eval_err=$? # eval should assign all GDM_CONFIG_LOCK_KEYS
     if ((eval_err)) ; then 
-      echo "$(_S R S)The following config_lock element could not be evaluated:\n$(_S)$lock_entry\n$(_S R S)$assigments_or_stderr$(_S)"  >&2 ; return $GDM_ERRORS[invalid_argument] 
+      echo "$(_S R S)The following config_lock element could not be evaluated:\n$(_S)  $lock_entry\n$(_S R S)$assigments_or_stderr$(_S)"  >&2 ; return $GDM_ERRORS[invalid_argument] 
     fi
 
     required_path="$GDM_PROJ_ROOT/$GDM_REQUIRED/$destin" 

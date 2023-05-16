@@ -12,7 +12,7 @@ export GDM="${GDM:=${0:a:h:h}/dist/gdm-test.zsh}" #TEST
 
 export config=(
   # Example:
-  'juce-framework/JUCE#develop as=juce-dev setup="rm -rf .git"'
+  'juce-framework/JUCE#develop destin=juce-dev setup="rm -rf .git"'
   'juce-framework/JUCE#develop'
 )
 

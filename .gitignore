@@ -6,6 +6,8 @@ gdm-test.zsh
 /test/*
 !/test/gdm.zsh
 !/test/packTest.zsh
+!/test/gdm_parseConfigTest.zsh
+!/test/gdm_expandDestinationTest.zsh
 
 Implementation_Notes.md
 

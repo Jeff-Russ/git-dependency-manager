@@ -98,7 +98,7 @@ gdm_gitExpandRemoteUrl() {
   remote_ref="${1:l}" # we try lowercased first to avoid multiple registrations
   local remote_url
   
-  if ! remote_url="$( $0.main "$remote_ref" )" ; then
+  if ! remote_url="$( $0.main "$remote_ref" )" ; then  # if lower casing fails...
     remote_ref="$1" # try original casing
     if ! remote_url="$( $0.main "$remote_ref" )" || [[ -z "$remote_url" ]] ; then
       return $GDM_ERRORS[cannot_expand_remote_url]
@@ -108,7 +108,145 @@ gdm_gitExpandRemoteUrl() {
   
 }
 
+
+gdm_expandDestination() {
+  # INPUT: 
+  #     "$destin" (not including tag, only portion after =) WHICH MUST NOT BE EMPTY
+  # OUPUT (without error):
+  #     if return is 0, assignments of the following: 
+  #         destin        # input, possibly reformed to standardized so any given required_path destin_relto combo has one notation.
+  #                       # NOTE: If input is empty return will be 0 and output will show 
+  #                           destin="" destin_relto=GDM_REQUIRED required_path=""
+  #                       #   which signals that destin and required_path should be derived from the repository name.
+  #         destin_relto  # value is:
+  #             HOME           if destin starts with ~/
+  #             GDM_PROJ_ROOT  if destin starts with ./ or ../
+  #             SYSTEM_ROOT    if destin starts with /
+  #             GDM_REQUIRED   if destin does not start with any of the above or is empty
+  #         required_path # absolute path of destin, relative to $destin_relto. Blank if input was empty
+  # ERRORS REASONS: Colored stderr message with return of $GDM_ERRORS[invalid_destination_arg] if any of the following...
+  #         allow_destin_relto_$destin_relto isn't in GDM_EXPERIMENTAL and destin_relto is GDM_PROJ_ROOT HOME SYSTEM_ROOT
+  #         destin regex is '~/*' or only contains: dots . and/or forward slashes / (destin is: / ~/ ../ ./ ~ .. or .)
+  #         HOME          but is NOT within or equals: ($HOME)
+  #         HOME          but is within or equals: ($GDM_REQUIRED or $GDM_PROJ_ROOT) 
+  #         SYSTEM_ROOT   but is within or equals: ($GDM_REQUIRED or $GDM_PROJ_ROOT or $HOME)
+  #         GDM_PROJ_ROOT but is within or equals: ($GDM_REQUIRED)
+  #         GDM_PROJ_ROOT (starting ../) but is     within or equals: ($GDM_PROJ_ROOT) 
+  #         GDM_PROJ_ROOT (starting ./)  but is NOT within or equals: ($GDM_PROJ_ROOT) 
+  # IMPORTANT: 
+  #        1) The input $destin should never be provided with a value starting with $HOME or unquoted ~/ ../ or ./ as these
+  #           would expand to SYSTEM_ROOT paths and then fail for being within $HOME or somewhere else not allowed. 
+  #        2) This function isn't fully tested for any GDM_EXPERIMENTAL mode enabled.
+  # DEPENDS ON BEING SET AND VALID: 
+  #     GDM_PROJ_ROOT (GDM_EXPERIMENTAL GDM_REQUIRED GDM_ERRORS) gdm_echoVars abspath relpath _S
+  local INVALID=$GDM_ERRORS[invalid_destination_arg]
+
+  if [[ "$1" =~ '^(~/*|[./]+)$' ]] ; then  # destin is ~/+ or only contains: dots ('.') and/or forward slashes ('/')
+    echo "$(_S R)destin='$1' path provided does not contain a directory name$(_S)" >&2 ; return $INVALID 
+  fi 
+
+  local outputVars=( destin destin_relto required_path ) ;  local $outputVars
+  destin="$1" # should already be extracted from argument after first = sign.
+  while [[ "$destin[-1]" == '/' ]] ; do destin="$destin[1,-2]" ; done # remove trailing /
+
+  #TODO: the following requires that GDM_REQUIRED not start with ~/ or be a full path or else gdm_required_abs will be wrong!
+  local gdm_required_abs="$GDM_PROJ_ROOT/$GDM_REQUIRED" ; gdm_required_abs="${gdm_required_abs:a}" 
+  local gdm_required_is_in_proj=false ; [[ "$gdm_required_abs" == "$GDM_PROJ_ROOT"* ]] && gdm_required_is_in_proj=true
+  
+  if [[ "$destin" != *'/'*  ]] ; then # A quick return for the most common scenario: 
+    destin_relto='GDM_REQUIRED' # And would pass whether we allow allow_nonflat_GDM_REQUIRED or not
+    ! [[ -z "$destin" ]] && required_path="$gdm_required_abs/$destin" 
+    gdm_echoVars $outputVars ;
+    return 0 ;
+  fi
+
+  local not_within=()
+
+  0.checkAllow() {
+    if ! (($GDM_EXPERIMENTAL[(Ie)allow_destin_relto_$destin_relto])) ; then
+      echo "$(_S R)destin='$destin' is a path relative to $destin_relto which is not allowed unless "
+      echo "'allow_destin_relto_$destin_relto' is added to the exported GDM_EXPERIMENTAL array.$(_S)" >&2 ; return $INVALID
+    else return 0
+    fi
+  }
+  0.err() { echo "$(_S R)$1$(_S)" >&2 ; return $INVALID ; }
+
+  if [[ "$destin" == '~/'* ]] ;           then # destin starts with ~/ (and is not HOME itself due to '^(~/+|[./]+)$' check)
+    destin_relto='HOME' ; 0.checkAllow || return $INVALID
+    required_path="$HOME${destin[2,-1]}" ; required_path="${temp_destin:a}" # bc zsh :a fails with ~/ (try destin='~/place/../../')
+
+    # RESTRICTIONS: $destin must 1) be in and not equal to $HOME ...
+    if [[ "$required_path" != "$HOME/"* ]] ; then 
+      0.err "destin='$destin' is a path relative to $destin_relto which must be within HOME directory and not equal to it" ; return $?
+    fi # ...and not be within 2) $GDM_PROJ_ROOT ...
+    not_within=(GDM_PROJ_ROOT) # ...and 3) not be within $GDM_REQUIRED but all but GDM_REQUIRED will be checked for for that
+    
+
+  elif [[ "$destin" =~ '^(\.\.\/|\.\/)' ]] ; then 
+    destin_relto='GDM_PROJ_ROOT'  ; 0.checkAllow || return $?
+    required_path="$(abspath $destin $GDM_PROJ_ROOT)"
+
+    # RESTRICTIONS: $destin ...
+    if [[ "$destin" == './'* ]] ; then # 1) if starting with ./ must be IN and not equal to $GDM_PROJ_ROOT...
+      if [[ "$required_path" != "$GDM_PROJ_ROOT/"* ]] ; then 
+        0.err "destin='$destin' is a path relative to $destin_relto and starting ./ which must be within and not equal to GDM_PROJ_ROOT" ; return $?
+      fi
+      destin="./$(relpath $required_path $GDM_PROJ_ROOT)" # REFORM destin 
+    fi  
+    if [[ "$destin" == '../'* ]] ; then  # ...and 2) if starting with ../ must be NOT be in or equal to $GDM_PROJ_ROOT...
+      if [[ "$required_path" == "$GDM_PROJ_ROOT"* ]] ; then 
+        0.err "destin='$destin' is a path relative to $destin_relto and starting ../ which must NOT be within or equal to GDM_PROJ_ROOT"  ; return $?
+      fi
+      destin="$(relpath $required_path $GDM_PROJ_ROOT)"
+    fi
+    # ...and 3) not be within $GDM_REQUIRED but all but GDM_REQUIRED will be checked for for that
+    
+  elif [[ "$destin" == '/'* ]] ; then   # destin starts with / (and is not / itself due to '^(~/+|[./]+)$' check)
+    destin_relto='SYSTEM_ROOT'  ; 0.checkAllow || return $?
+    required_path="${destin:a}"
+    destin="$required_path" # REFORM destin 
+
+    # RESTRICTIONS: $destin must not be within 1) $HOME 2) $GDM_PROJ_ROOT
+    not_within=(HOME GDM_PROJ_ROOT) # ...and 3) not be within $GDM_REQUIRED but all but GDM_REQUIRED will be checked for for that
+
+  elif (($GDM_EXPERIMENTAL[(Ie)allow_nonflat_GDM_REQUIRED])) ; then
+    destin_relto='GDM_REQUIRED'
+    required_path="$(abspath $destin $gdm_required_abs)"
+    # RESTRICTION: $destin 1) must in IN but not equal to $gdm_required_abs and that's it!
+    if [[ "$required_path" != "$gdm_required_abs/"* ]] ; then 
+      0.err "destin='$destin' is a path relative to $destin_relto which must be within and not equal to GDM_REQUIRED" ; return $?
+    fi
+    destin="$(relpath $required_path $gdm_required_abs)" # REFORM destin 
+    gdm_echoVars $outputVars ; return 0 ;
+    
+
+  else # destin must be dirname or dirname/+ and was not
+    destin_relto='GDM_REQUIRED'
+    local err="destin='$destin' is a path relative to $destin_relto which must be DIRECT child of the"
+    0.err "$err\nGDM_REQUIRED directory unless 'allow_nonflat_GDM_REQUIRED' added to the GDM_EXPERIMENTAL array." ; return $?
+  fi
+
+  if [[ "$required_path" == "$gdm_required_abs/"* ]] ; then
+    0.err "destin='$destin' is a path relative to $destin_relto which must not be within or equal to GDM_REQUIRED" ; return $?
+  fi 
+
+  for location in $not_within ; do  
+    if [[ "$required_path" == "${(P)location}"* ]] ; then
+      0.err "destin='$destin' is a path relative to $destin_relto which must not be within or equal to $location" ; return $?
+    fi
+  done
+
+  gdm_echoVars $outputVars ; return 0 ; 
+}
+
+tst() {
+  [[ "$1" =~ '^([./]+)$' ]] && echo "only dots or only slashes" || echo "has non dot/slash chars"
+}
+
+
+
 gdm_setupToHash() {
+  # POSSIBLE ERRORS invalid_setup (previously also return 1 for $0.strToHash failure)
   local setup="$1" # value after = in setup=
   # Here we resolve value of $setup to something that doesn't change and then form a $hash from that
   local setup_target="" # this is cat of file if setup is script, source of function if typeset -f "$setup" else just setup copied
@@ -126,7 +264,7 @@ gdm_setupToHash() {
     echo "$(_S R S)$setup (setup) is not a script or function! $(_S)" >&2 ; return $GDM_ERRORS[invalid_setup] ;
   fi
   $0.strToHash() { crc32 <(echo "$1") ; }
-  if ! setup_hash=$($0.strToHash "$setup_target") ; then echo "$(_S R S)$setup (setup) cannot be hashed! $(_S)" >&2 ; return 1 ; fi
+  if ! setup_hash=$($0.strToHash "$setup_target") ; then echo "$(_S R S)$setup (setup) cannot be hashed! $(_S)" >&2 ; return $GDM_ERRORS[invalid_setup]; fi # changed from return 1 (good idea?)
   
   echo $setup_hash
   return 0
@@ -140,28 +278,7 @@ gdm_isNonPathStr() {  # used in  helpers: gdm.parseRequirement
   [[ "$1" =~ '^[.]*$' ]] || test "${1//\//}" != "$1" && return 1 || return 0
 }
 
-gdm_pathNotation() {
-  # possible outputs:
-  #     "relative to /"    "equivalent to /" 
-  #     "relative to ../"  "equivalent to ../"
-  #     "relative to ./"   "equivalent to ./"
-  #     "relative to ~/"   "equivalent to ~/"
-  #     "relative to name" "empty"
-  if [[ "$1" == '/'* ]] ; then 
-    [[ "$1" =~ '^[\/]+$' ]] && echo "equivalent to /" || echo "relative to /"
-  elif [[ "$1" == '..'* ]] && [[ "$1" != '...'* ]] ; then
-    if [[ "$1" =~ '^\.\.[\/]*$' ]] ;        then echo "equivalent to ../"
-    elif [[ "$1" =~ '^\.\.[\/]+[^\/]+' ]] ; then echo "relative to ../" 
-    else                                         echo "relative to name"
-    fi
-  elif [[ "$1" == '.'* ]] ; then
-    [[ "$1" =~ '^\.[\/]*$' ]] && echo "equivalent to ./" || echo "relative to ./"
-  elif [[ "$1" == '~'* ]] ; then 
-    [[ "$1" =~ '^~[\/]*$' ]] && echo "equivalent to ~/" || echo "relative to ~/"
-  elif ! [[ -z "$1" ]] ; then  echo "relative to name"
-  else echo 'empty'
-  fi
-}
+
 
 gdm_multiArgError() { echo "$(_S R S)$1 has multiple $2 specified! $(_S)" >&2 ; return $GDM_ERRORS[invalid_argument] ; }
 

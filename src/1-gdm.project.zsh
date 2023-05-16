@@ -1,13 +1,12 @@
 export GDM_CALL_EVAL_CONTEXT="$ZSH_EVAL_CONTEXT" 
 export GDM_CALL_FFTRACE=("${funcfiletrace[@]}") 
 export GDM_CALLER_WD="$PWD"
-export GDM_CALL_ARGS=() # Will be set in gdm() BEFORE anything here is called. Includes operation arg
 
 export GDM_PROJ_VARS="" # archive of local var assignments used to assign each other GDM_PROJ_* var
 export GDM_PROJ_CALL_STATUS=""
-export GDM_PROJ_ROOT=""        # full absolute path of project root directory
+export GDM_PROJ_ROOT=""      # full absolute path of project root directory
 export GDM_PROJ_CONF_FILE="" # full absolute file path
-export GDM_PROJ_CONF_WAS=""  # created|valid|invalid|"unexpected error" or 'missing' but not for long if --init
+export GDM_PROJ_CONF_WAS=""  # created|valid|invalid|destination_already_required_to|unexpected_error or 'missing' but not for long if --init
 
 export GDM_PROJ_CONF_FILE_SECTIONS=(  # contents of file in chunks where replaceable portion (conf and conf_lock arrays) are chunks
   '' # [1] (readonly) is all lines before conf array
@@ -15,32 +14,11 @@ export GDM_PROJ_CONF_FILE_SECTIONS=(  # contents of file in chunks where replace
   '' # [3] (readonly) is all lines after conf array and before conf_lock
   '' # [4] (REPLACABLE) is all lines where conf_lock array is declared+defined
   '' # [5] (readonly) is all remaining lines
-) 
+)
 
 export GDM_PROJ_CONFIG_ARRAY=()
 export GDM_PROJ_LOCK_ARRAY=()
 export GDM_PROJ_CONFIG_IDX=0 # should be incremented as index of both GDM_PROJ_CONFIG_ARRAY and GDM_PROJ_LOCK_ARRAY (at once)
-#NOTE GDM_CALL_ARGS (as a string) is basically GDM_PROJ_CONFIG_ARRAY[$GDM_PROJ_CONFIG_IDX] when GDM_PROJ_CONFIG_IDX==0
-
-export GDM_PROJ_CONFIG_I_TO_LOCK_I=() # Each index is a GDM_PROJ_CONFIG_ARRAY index and each value is:
-# 1) the corresponding index in GDM_PROJ_LOCK_ARRAY with the same `destin` value
-#   but it could also be:
-# 2) the `destin` value if there is no corresponding index in GDM_PROJ_LOCK_ARRAY with the same `destin` value
-# 3) a key in GDM_ERRORS (*_destination_arg, destination_already_required_to), indicating the conf requirement has an error.
-# NOTE that the absence of an error doesn't mean there won't be one found later when the requirement is passed to gdm.require.
-
-export GDM_PROJ_DROP_LOCK_I=() # values are indices in GDM_PROJ_LOCK_ARRAY with `destin` values not targeted by 
-# any requirement in config (GDM_PROJ_CONFIG_ARRAY). Note that the indexes in GDM_PROJ_DROP_LOCK_I is unimportant. 
-# GDM_PROJ_DROP_LOCK_I is basically a list of the elements no longer needed in conf_lock since they are not longer required.
-
-export GDM_PROJ_OVERRIDE_CONFIG_I=()  #TODO: (implement this) If non-empty, stores the GDM_PROJ_LOCK_ARRAY indices that GDM_CALL_ARGS is modifying. 
-                                      #TODO: This is an array because we'll have operations like `unrequire` that work many.
-
-export GDM_PROJ_LOCKED_CONFIG_I=()  #TODO: (implement this)  If non-empty, stores the GDM_PROJ_LOCK_ARRAY indices that should resolve to the
-                                    #  hash in the corresponding GDM_PROJ_LOCK_ARRAY (to be looked up with GDM_PROJ_CONFIG_I_TO_LOCK_I)
-                                    # because the original requirement referred to a revision that may resolve to a different 
-                                    # hash depending on time of requiring, which was previously locked in by config_lock. 
-                                    # These should be verified against the locked hash and, if missing, installed by the lock hash.
 
 
 gdm.init() {
@@ -122,7 +100,7 @@ gdm.project() {
   GDM_PROJ_LOCK_ARRAY=("${config_lock[@]}")
 
 
-  gdm.parseConfig
+  gdm.parseConfig #-> gdm.project calls gdm.parseConfig
 
   local line_num=0 ;
   while IFS= read -r line  || [ -n "$line" ] ; do 
@@ -176,10 +154,10 @@ gdm_locateProject() {
   #    Always Output: 
   #       call_status="$how by conf"|"$how with conf found in stack"|"$how from shell without project"|"$how from shell at project $where"
   #                 WHERE: how=sourced|executed and where=root|subdir
-  #       config_was=created|valid|invalid|"unexpected error"
+  #       config_was=created|valid|invalid|unexpected_error
   #                                    # if config_was missing, it will be created and thus config_was is reassigned to created, which means valid
   #                                    # if config_was found, it only stays as such until validation, which reassigs it to valid or invalid
-  #                                    # "unexpected error" is an internal error (returning 1) which indicates a bug in GDM
+  #                                    # "unexpected_error" is an internal error (returning 1) which indicates a bug in GDM
   #       proj_root=<fullpath>|""      # non-empty if found (via conf found or config_was==missing), whether valid or not
   #       proj_conf=<fullpath>|""      # non-empty if found, whether valid or not
   #       errors=(<plain strings>) # error messages normally to be displayed to user, 
@@ -237,7 +215,7 @@ gdm_locateProject() {
   ##### FIND proj_root proj_conf BY DETERMINING call_status  ######################################
   local sourced=false ; [[ "$GDM_CALL_EVAL_CONTEXT" == *':file' ]] && sourced=true
   local call_status="$($sourced && echo sourced || echo executed)" 
-  local config_was="unexpected error" 
+  local config_was="unexpected_error" 
   local proj_conf=""
   local conf_call_line="" # currently unsused
   local proj_root=""
@@ -277,12 +255,16 @@ gdm_locateProject() {
   
 
   ##### ENFORCE VALID GDM_REQUIRED VALUE ##########################################################
-  if  ! (($GDM_EXPERIMENTAL[(Ie)any_required_path])) ; then # If experimental mode disabled....
+  if  ! (($GDM_EXPERIMENTAL[(Ie)any_GDM_REQUIRED_path])) ; then # If experimental mode disabled....
     # ERROR IF GDM_REQUIRED IS NOT WITHIN proj_root
-    local reqdir_relto_proj="$(gdm_dirA_relto_B $proj_root/$GDM_REQUIRED $proj_root GDM_REQUIRED GDM_PROJ_ROOT)" 
+
+    #TODO: the following requires that GDM_REQUIRED not start with ~/ or be a full path or else gdm_required_abs will be wrong!
+    local gdm_required_abs="$proj_root/$GDM_REQUIRED" ; gdm_required_abs="${gdm_required_abs:a}" 
+
+    local reqdir_relto_proj="$(gdm_dirA_relto_B $gdm_required_abs $proj_root GDM_REQUIRED GDM_PROJ_ROOT)" 
     # possible values:  *" is contained by "*   *" contains "*   *" is "*   *" has no relation to "*  (first * is GDM_REQUIRED) 
     if [[ "$reqdir_relto_proj" != "GDM_REQUIRED is contained by GDM_PROJ_ROOT" ]] ; then 
-      conf_was="" # remove default value "unexpected error" as we are returning before having properly set conf_was
+      conf_was="" # remove default value "unexpected_error" as we are returning before having properly set conf_was
       errors+=("GDM_REQUIRED=$GDM_REQUIRED is not within GDM_PROJ_ROOT=$proj_root ($reqdir_relto_proj)")
       gdm_echoVars --append-array call_status config_was proj_root proj_conf errors
       return $GDM_ERRORS[invalid_GDM_REQUIRED_path]
@@ -301,7 +283,7 @@ gdm_locateProject() {
   elif [[ "$call_status" == 'sourced by conf' ]] || [[ "$call_status" == *' from shell at project '* ]] ; then
     config_was=found # okay for now but could be invalid so next step would be to validate it
   else # This can't possibly happen but just in case...
-    config_was="unexpected error"
+    config_was="unexpected_error"
     errors+=("Unexpected Error in gdm_locateProject: unknown call_status")
     ret_code=1 # generic error
   fi
@@ -534,96 +516,4 @@ gdm_locateConfSections() {
   else return 0
   fi
 
-}
-
-gdm.parseConfig() {
-  # Constructs GDM_PROJ_CONFIG_I_TO_LOCK_I (and GDM_PROJ_DROP_LOCK_I)
-
-  GDM_PROJ_CONFIG_I_TO_LOCK_I=()
-  GDM_PROJ_DROP_LOCK_I=()      #TODO: (implement this) 
-  GDM_PROJ_LOCKED_CONFIG_I=()  #TODO: (implement this) 
-
-  local destin required_path # ...but we only really need `destin`
-  local repo_identifier
-
-  for conf_i in {1..$#GDM_PROJ_CONFIG_ARRAY} ; do
-    # test with req='juce-framework/JUCE#develop destin=juce-dev setup="rm -rf .git"' ; eval "local args=($req)"
-    eval "local args=( $GDM_PROJ_CONFIG_ARRAY[$conf_i] )"
-
-    # TODO: redo with a function call: maybe even a call to parseRequirement, which we can give some shorter execution
-    #--- Find `destin` value --------------------------------------------------------------------------
-    repo_identifier="$args[1]" ; 
-    args=("${(@)args:1}") # remove first arg
-    for arg in $args[@] ; do
-      if ! destin_assignments="$(gdm_parseIfDesinationOption $arg 2>/dev/null )" ; then
-        GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]="invalid_destination_arg"
-      elif ! [[ -z "$destin_assignments" ]] ; then
-        if ! [[ -z "$required_path" ]] ; then
-          GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]="multiple_destination_args"
-        else
-          eval "$destin_assignments"
-          if (($GDM_PROJ_CONFIG_I_TO_LOCK_I[(Ie)$destin])) ; then
-            GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]="destination_already_required_to"
-          else
-            GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]="$destin"
-          fi
-        fi
-        break
-      fi
-    done
-    # Default `destin` value (use same capitalization used by user in specifying repository):
-    [[ -z "$GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]" ]] && GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]="${${repo_identifier%#*}:t:r}" 
-  done
-
-  #TODO we no longer have GDM_CONFIG_LOCKVARS, now it's GDM_CONFIG_LOCK_KEYS
-  # # avoid re-declaring any local (since that seems to cause output in zsh):
-  # for var_name in $GDM_CONFIG_LOCKVARS ; do ! [[ -v $var_name ]] && local $var_name ; done
-  # local conf_i
-
-  # for lock_i in {1..$#GDM_PROJ_LOCK_ARRAY} ; do    
-  #   eval "$GDM_PROJ_LOCK_ARRAY[$lock_i]" # sets `destin` since `destin` is in $GDM_CONFIG_LOCKVARS
-  #   conf_i=$(($GDM_PROJ_CONFIG_I_TO_LOCK_I[(Ie)$destin])) # index of $destin in conf, or 0 if not found
-  #   if ((conf_i!=0)) ; then GDM_PROJ_CONFIG_I_TO_LOCK_I[$conf_i]=$lock_i
-  #   else GDM_PROJ_DROP_LOCK_I+=($lock_i)
-  #   fi
-  # done
-}
-
-# for debugging:
-gdm.echoProjVars() {
-  typeset -m 'GDM_CALL*'
-  typeset -m 'GDM_PROJ*'
-  # echo $GDM_PROJ_VARS
-}
-
-
-gdm.update_conf() {
-  local proj_conf="$1" ; [[ -z "$proj_conf" ]] && proj_conf="$GDM_PROJ_CONF_FILE"
-  if [[ -z "$proj_conf" ]] ; then # shouldn't ever actually happen
-    echo "$(_S R)Cannot write to project configuration file as it's path is not found!" >&2 
-    return $GDM_ERRORS[unexpected_error]
-  fi
-  $0.write_array() { # needs outer scope's $proj_conf
-    local array_name="$1" ; shift
-    echo "export $array_name=(" >> "$proj_conf"
-    for elem in $@ ; do
-      local has_single=false ; [[ "$elem" =~ "(^'|[^\\]')" ]] && has_single=true
-      local has_double=false ; [[ "$elem" =~ '(^"|[^\\]")' ]] && has_double=true
-
-      if $has_single && ! $has_double ; then
-        echo "  \"$elem\"" >> "$proj_conf"
-      else
-        echo "  '$elem'" >> "$proj_conf"
-        if $has_single && $has_double ; then
-          echo "$(_S Y)WARNING: The following array element written to $proj_conf has both unescaped single and double quotes and may need correction:$(_S)\n '$elem'" >&2 
-        fi
-      fi
-    done
-    echo ")" >> "$proj_conf"
-  }
-  echo "${GDM_PROJ_CONF_FILE_SECTIONS[1]}" > "$proj_conf"
-  $0.write_array config "${GDM_PROJ_CONFIG_ARRAY[@]}"
-  echo "${GDM_PROJ_CONF_FILE_SECTIONS[3]}" >> "$proj_conf"
-  $0.write_array config_lock "${GDM_PROJ_LOCK_ARRAY[@]}"
-  echo "${GDM_PROJ_CONF_FILE_SECTIONS[5]}" >> "$proj_conf"
 }
